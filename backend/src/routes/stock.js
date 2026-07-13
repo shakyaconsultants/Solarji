@@ -13,7 +13,7 @@ const dashCache = require('../utils/dashboardCache');
 router.get('/public/items', async (req, res) => {
   try {
     const items = await StockItem.find({ isActive: true })
-      .select('name category unit sellPrice')
+      .select('name category unit sellPrice quantity')
       .sort({ name: 1 })
       .lean();
     res.json({ items });

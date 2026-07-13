@@ -82,6 +82,12 @@ export default function Home() {
                   onMouseLeave={e=>e.target.style.color='#6b7280'}
                 >{l}</a>
               ))}
+              <a href="/shop"
+                style={{ fontSize:'.875rem', fontWeight:600, color:'#6b7280', textDecoration:'none', transition:'color .15s' }}
+                onMouseEnter={e=>e.target.style.color=ORANGE}
+                onMouseLeave={e=>e.target.style.color='#6b7280'}
+                onClick={(e) => { e.preventDefault(); navigate('/shop'); }}
+              >Shop / Products</a>
               <button
                 type="button"
                 onClick={() => navigate('/complaint')}
@@ -123,6 +129,11 @@ export default function Home() {
                     onClick={scrollLock}
                   >{l}</a>
                 ))}
+                <a
+                  href="/shop"
+                  className="py-2.5 px-2 rounded-xl font-semibold text-gray-700 active:bg-orange-50 text-left w-full block"
+                  onClick={(e) => { e.preventDefault(); navigate('/shop'); scrollLock(); }}
+                >Shop / Products</a>
                 <button
                   type="button"
                   className="py-2.5 px-2 rounded-xl font-semibold text-gray-700 active:bg-orange-50 text-left w-full"

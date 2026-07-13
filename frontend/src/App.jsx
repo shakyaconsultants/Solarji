@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense } from 'react'
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -7,6 +7,7 @@ import Home from './pages/website/Home'
 import QuotationGenerator from './pages/website/QuotationGenerator'
 import RegisterComplaint from './pages/website/RegisterComplaint'
 import Login from './pages/auth/Login'
+import Shop from './pages/website/Shop'
 
 const CRMDashboard = lazy(() => import('./pages/crm/CRMDashboard'))
 const Leads = lazy(() => import('./pages/crm/Leads'))
@@ -64,6 +65,7 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/shop" element={<Shop />} />
         <Route path="/quotation" element={<QuotationGenerator />} />
         <Route path="/complaint" element={<RegisterComplaint />} />
         <Route path="/login" element={<Login />} />

@@ -52,7 +52,7 @@ router.post('/public', async (req, res) => {
         stage: 'Lead',
         assignedTo: admin._id,
         movedBy: admin._id,
-        note: 'Lead created from Quotation Generator',
+        note: `Lead created from ${source || 'Quotation Generator'}`,
         date: new Date(),
       }],
     });
