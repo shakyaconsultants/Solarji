@@ -1,4 +1,4 @@
-﻿import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Target, Package, ShoppingCart, FileText,
@@ -12,6 +12,7 @@ const CRM_LINKS = [
   { to:'/crm/leads',     label:'All Leads',       icon:Target },
   { to:'/crm/leads/new', label:'New Lead',         icon:PlusCircle },
   { to:'/crm/complaints', label:'Complaints',     icon:AlertCircle },
+  { to:'/crm/orders',     label:'Shop Orders',     icon:ShoppingCart },
 ];
 const CRM_TEAM   = [{ to:'/crm/team', label:'Team', icon:Users }];
 const CRM_ADMIN  = [{ to:'/crm/users', label:'User Management', icon:Users }];

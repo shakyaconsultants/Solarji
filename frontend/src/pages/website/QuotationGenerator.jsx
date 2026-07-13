@@ -912,10 +912,10 @@ export default function QuotationGenerator() {
                 <div className="qs" style={{ background:WHITE, borderRadius:20, border:'1px solid #e5e7eb', padding:'1.5rem' }}>
                   <p style={{ fontWeight:900, color:BLACK, fontSize:'.9rem', marginBottom:'1rem' }}>Bank Details</p>
                   {[
-                    ['Beneficiary Name', 'SolarJi'],
-                    ['Bank Name',        'State Bank of India'],
-                    ['Account No.',      'XXXXXXXXXXXX'],
-                    ['IFSC Code',        'SBIN00XXXXX'],
+                    ['Beneficiary Name', 'Rising Solar Energy'],
+                    ['Bank Name',        'Bank of India'],
+                    ['Account No.',      '733020110000286'],
+                    ['IFSC Code',        'BKID0007330'],
                   ].map(([k, v]) => (
                     <div key={k}
                       style={{ display:'flex', gap:8, padding:'6px 0',

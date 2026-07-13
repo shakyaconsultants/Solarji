@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const stockItemSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, unique: true },
@@ -9,6 +9,7 @@ const stockItemSchema = new mongoose.Schema({
   sellPrice: { type: Number, default: 0 },
   quantity: { type: Number, default: 0 },
   minQuantity: { type: Number, default: 0 },
+  imageUrl: { type: String, default: '' },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 

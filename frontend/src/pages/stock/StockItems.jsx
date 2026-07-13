@@ -69,10 +69,11 @@ export default function StockItems() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const { canManageStockItems } = useAuth();
   const { fetchDashboardStock, invalidateDashboardStock } = useDataCache();
 
-  const emptyForm = { name: '', description: '', category: 'Solar Panel', unit: 'piece', purchasePrice: '', sellPrice: '', quantity: '', minQuantity: 0 };
+  const emptyForm = { name: '', description: '', category: 'Solar Panel', unit: 'piece', purchasePrice: '', sellPrice: '', quantity: '', minQuantity: 0, imageUrl: '' };
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
@@ -115,7 +116,7 @@ export default function StockItems() {
   const openCreate = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
   const openEdit = (item) => {
     setEditing(item);
-    setForm({ name: item.name, description: item.description || '', category: item.category, unit: item.unit, purchasePrice: item.purchasePrice, sellPrice: item.sellPrice, quantity: item.quantity, minQuantity: item.minQuantity });
+    setForm({ name: item.name, description: item.description || '', category: item.category, unit: item.unit, purchasePrice: item.purchasePrice, sellPrice: item.sellPrice, quantity: item.quantity, minQuantity: item.minQuantity, imageUrl: item.imageUrl || '' });
     setShowModal(true);
   };
 
@@ -193,6 +194,27 @@ export default function StockItems() {
       showApiError(err, 'Could not open print report.');
     } finally {
       setPrinting(false);
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploadingImage(true);
+    try {
+      const res = await api.post('/stock/upload-image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      f('imageUrl', res.data.imageUrl);
+      toast.success('Image uploaded successfully');
+    } catch (err) {
+      showApiError(err, 'Failed to upload image.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -350,6 +372,27 @@ export default function StockItems() {
                   <div className="col-span-2">
                     <label className="label">Description</label>
                     <input className="input" value={form.description} onChange={e => f('description', e.target.value)} placeholder="Optional description" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="label">Item Image</label>
+                    <div className="flex gap-2">
+                      <input 
+                        className="input flex-1" 
+                        value={form.imageUrl} 
+                        onChange={e => f('imageUrl', e.target.value)} 
+                        placeholder="e.g. https://example.com/item.jpg" 
+                      />
+                      <label className="btn-secondary px-4 flex items-center justify-center shrink-0 cursor-pointer text-xs font-semibold relative" style={{ height: 38 }}>
+                        <span>Upload File</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleFileChange} 
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        />
+                      </label>
+                    </div>
+                    {uploadingImage && <p className="text-xs text-orange-600 mt-1">Uploading image... Please wait.</p>}
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">

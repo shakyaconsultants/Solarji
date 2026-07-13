@@ -16,6 +16,7 @@ const LeadDetail = lazy(() => import('./pages/crm/LeadDetail'))
 const Users = lazy(() => import('./pages/crm/Users'))
 const Team = lazy(() => import('./pages/crm/Team'))
 const Complaints = lazy(() => import('./pages/crm/Complaints'))
+const Orders = lazy(() => import('./pages/crm/Orders'))
 const StockDashboard = lazy(() => import('./pages/stock/StockDashboard'))
 const StockItems = lazy(() => import('./pages/stock/StockItems'))
 const VoucherForm = lazy(() => import('./pages/stock/VoucherForm'))
@@ -76,6 +77,7 @@ export default function App() {
         <Route path="/crm/users" element={<LazyPage adminOnly><Users /></LazyPage>} />
         <Route path="/crm/team" element={<LazyPage teamView><Team /></LazyPage>} />
         <Route path="/crm/complaints" element={<LazyPage complaintsOnly><Complaints /></LazyPage>} />
+        <Route path="/crm/orders" element={<LazyPage><Orders /></LazyPage>} />
         <Route path="/stock" element={<LazyPage stockOnly><StockDashboard /></LazyPage>} />
         <Route path="/stock/items" element={<LazyPage stockOnly><StockItems /></LazyPage>} />
         <Route path="/stock/voucher/add" element={<LazyPage stockOnly><VoucherForm type="ADD" /></LazyPage>} />

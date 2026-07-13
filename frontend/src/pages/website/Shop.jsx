@@ -122,27 +122,30 @@ export default function Shop() {
     if (!isFormValid) return;
     setSubmitting(true);
     try {
-      // Build lead requirements text out of cart items
-      const cartBOM = cartItems.map(item => {
-        return `- ${item.qty}x ${item.product.name} (${item.product.category}) @ ₹${item.product.sellPrice.toLocaleString('en-IN')}/${item.product.unit} = ₹${(item.product.sellPrice * item.qty).toLocaleString('en-IN')}`;
-      }).join('\n');
+      const items = cartItems.map(item => ({
+        itemId: item.product._id,
+        itemName: item.product.name,
+        category: item.product.category,
+        price: item.product.sellPrice,
+        quantity: item.qty,
+        unit: item.product.unit,
+        total: item.product.sellPrice * item.qty
+      }));
 
-      const requirements = `E-COMMERCE STORE ORDER REQUEST:\n\n${cartBOM}\n\nGRAND TOTAL: ₹${cartTotal.toLocaleString('en-IN')}\n\nDelivery Address: ${cAddr}, ${cCity}\nNotes: ${cNotes || 'None'}`;
-
-      const res = await api.post('/leads/public', {
-        name: cName,
+      const res = await api.post('/orders/public', {
+        customerName: cName,
         phone: cPhone,
         address: cAddr,
         city: cCity,
-        requirements,
-        systemSize: `${cartCount} items`,
-        source: 'E-commerce Store'
+        notes: cNotes,
+        items,
+        totalAmount: cartTotal
       });
 
-      setCreatedLeadId(res.data._id);
+      setCreatedLeadId(res.data.orderNumber); // use orderNumber as reference in UI
       setCheckoutSuccess(true);
       setCart({}); // Clear cart
-      toast.success('Order Inquiry placed successfully!');
+      toast.success('Order placed successfully!');
     } catch (err) {
       console.error(err);
       toast.error('Could not submit order. Please try again.');
@@ -266,6 +269,8 @@ export default function Shop() {
               const inCart = cart[prod._id];
               const isOutOfStock = prod.quantity <= 0;
 
+              const hasImage = prod.imageUrl && prod.imageUrl.trim() !== '';
+
               return (
                 <div key={prod._id}
                   style={{
@@ -287,24 +292,57 @@ export default function Shop() {
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.03)';
                   }}
                 >
-                  {/* Details */}
-                  <div style={{ padding:'1.25rem', flexGrow:1, display:'flex', flexDirection:'column' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                      <span style={{ background:'#f3f4f6', color:'#4b5563', fontSize:'.65rem', fontWeight:800,
-                                     padding:'3px 6px', borderRadius:4 }}>
+                  {hasImage ? (
+                    /* Image wrapper */
+                    <div style={{ height:180, width:'100%', overflow:'hidden', position:'relative', background:'#f3f4f6' }}>
+                      <img
+                        src={prod.imageUrl}
+                        alt={prod.name}
+                        style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                      />
+                      <span style={{ position:'absolute', top:12, left:12, background:'rgba(17,17,17,.75)',
+                                     backdropFilter:'blur(4px)', color:WHITE, fontSize:'.68rem', fontWeight:800,
+                                     padding:'4px 8px', borderRadius:6 }}>
                         {prod.category.toUpperCase()}
                       </span>
+
+                      {/* Stock status badge */}
                       <span style={{
+                        position:'absolute',
+                        top:12,
+                        right:12,
                         fontSize:'.68rem',
                         fontWeight:800,
-                        padding:'3px 6px',
-                        borderRadius:4,
+                        padding:'4px 8px',
+                        borderRadius:6,
                         background: isOutOfStock ? '#ffebeb' : '#e6f7ed',
                         color: isOutOfStock ? '#ef4444' : '#16a34a'
                       }}>
                         {isOutOfStock ? 'OUT OF STOCK' : 'IN STOCK'}
                       </span>
                     </div>
+                  ) : null}
+
+                  {/* Details */}
+                  <div style={{ padding:'1.25rem', flexGrow:1, display:'flex', flexDirection:'column' }}>
+                    {!hasImage && (
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                        <span style={{ background:'#f3f4f6', color:'#4b5563', fontSize:'.65rem', fontWeight:800,
+                                       padding:'3px 6px', borderRadius:4 }}>
+                          {prod.category.toUpperCase()}
+                        </span>
+                        <span style={{
+                          fontSize:'.68rem',
+                          fontWeight:800,
+                          padding:'3px 6px',
+                          borderRadius:4,
+                          background: isOutOfStock ? '#ffebeb' : '#e6f7ed',
+                          color: isOutOfStock ? '#ef4444' : '#16a34a'
+                        }}>
+                          {isOutOfStock ? 'OUT OF STOCK' : 'IN STOCK'}
+                        </span>
+                      </div>
+                    )}
 
                     <h3 style={{ fontWeight:800, color:BLACK, fontSize:'.92rem', minHeight:44, lineHeight:1.4 }}>
                       {prod.name}
@@ -415,6 +453,13 @@ export default function Shop() {
                   {cartItems.map(item => (
                     <div key={item.product._id}
                       style={{ display:'flex', gap:12, paddingBottom:'1.25rem', borderBottom:'1px solid #f3f4f6' }}>
+                      {item.product.imageUrl && item.product.imageUrl.trim() !== '' ? (
+                        <img
+                          src={item.product.imageUrl}
+                          alt=""
+                          style={{ width:64, height:64, borderRadius:8, objectFit:'cover', background:'#f3f4f6' }}
+                        />
+                      ) : null}
                       <div style={{ flexGrow:1 }}>
                         <h4 style={{ fontSize:'.85rem', fontWeight:800, color:BLACK, lineHeight:1.3, marginBottom:4 }}>
                           {item.product.name}

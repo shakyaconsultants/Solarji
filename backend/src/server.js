@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
@@ -41,6 +41,7 @@ app.use('/api/leads', require('./routes/leads'));
 app.use('/api/stock', require('./routes/stock'));
 app.use('/api/quotations', require('./routes/quotations'));
 app.use('/api/complaints', require('./routes/complaints'));
+app.use('/api/orders', require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'SolarJi API' }));

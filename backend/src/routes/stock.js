@@ -8,12 +8,13 @@ const {
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { sendError } = require('../utils/sendError');
 const dashCache = require('../utils/dashboardCache');
+const { upload, compressAndUpload } = require('../middleware/upload');
 
 // Public route - get active stock items list for Quotation page
 router.get('/public/items', async (req, res) => {
   try {
     const items = await StockItem.find({ isActive: true })
-      .select('name category unit sellPrice quantity')
+      .select('name category unit sellPrice quantity imageUrl')
       .sort({ name: 1 })
       .lean();
     res.json({ items });
@@ -23,6 +24,19 @@ router.get('/public/items', async (req, res) => {
 });
 
 router.use(protect);
+
+// POST /api/stock/upload-image - Upload an item image
+router.post('/upload-image', stockItemManage, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    const result = await compressAndUpload(req.file, { folder: 'solarji/stock' });
+    res.json({ imageUrl: result.url });
+  } catch (err) {
+    sendError(res, err, 'Could not upload image.');
+  }
+});
 
 async function loadStockItemMap(itemIds) {
   const uniqueIds = [...new Set(itemIds.map(String))];
