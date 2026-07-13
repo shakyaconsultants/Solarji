@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Package, Plus, Edit2, Trash2, X, Search, Printer } from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
@@ -11,7 +11,7 @@ import { useDataCache } from '../../context/DataCacheContext';
 const ORANGE = '#f7941d';
 const PAGE_SIZE = 20;
 
-function buildPrintHtml(items, now) {
+function buildPrintHtml(items, now, isAdmin) {
   const lowStock = items.filter(i => i.minQuantity > 0 && i.quantity <= i.minQuantity);
   const rows = items.map((item, i) => {
     const isLow = item.minQuantity > 0 && item.quantity <= item.minQuantity;
@@ -21,7 +21,7 @@ function buildPrintHtml(items, now) {
         <td><strong>${item.name}</strong>${item.description ? `<br /><span style="font-size: 10px; color: #888">${item.description}</span>` : ''}</td>
         <td><span class="cat">${item.category}</span></td>
         <td>${item.unit}</td>
-        <td>₹${item.purchasePrice?.toLocaleString('en-IN')}</td>
+        ${isAdmin ? `<td>₹${item.purchasePrice?.toLocaleString('en-IN')}</td>` : ''}
         <td>₹${item.sellPrice?.toLocaleString('en-IN')}</td>
         <td class="${isLow ? 'low' : 'ok'}">${item.quantity}</td>
         <td>${item.minQuantity}</td>
@@ -44,13 +44,13 @@ function buildPrintHtml(items, now) {
       <thead>
         <tr>
           <th>#</th><th>Item Name</th><th>Category</th><th>Unit</th>
-          <th>Purchase Price</th><th>Sell Price</th><th>Qty In Stock</th><th>Min Qty</th><th>Status</th>
+          ${isAdmin ? '<th>Purchase Price</th>' : ''}<th>Sell Price</th><th>Qty In Stock</th><th>Min Qty</th><th>Status</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
       <tfoot>
         <tr>
-          <td colspan="6" style="text-align: right">TOTAL ITEMS IN REPORT:</td>
+          <td colspan="${isAdmin ? 6 : 5}" style="text-align: right">TOTAL ITEMS IN REPORT:</td>
           <td colspan="3">${items.length} items &nbsp;|&nbsp; ${lowStock.length} low stock</td>
         </tr>
       </tfoot>
@@ -160,7 +160,7 @@ export default function StockItems() {
       });
       const printItems = res.data.items || [];
       const now = new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' });
-      const printContent = buildPrintHtml(printItems, now);
+      const printContent = buildPrintHtml(printItems, now, canManageStockItems);
       const win = window.open('', '_blank', 'width=900,height=700');
       win.document.write(`
         <!DOCTYPE html>
@@ -243,7 +243,7 @@ export default function StockItems() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-gray-100">
-                      {['Item Name', 'Category', 'Purchase Price', 'Sell Price', 'Quantity', 'Min Qty', ...(canManageStockItems ? ['Actions'] : [])].map(h => (
+                      {['Item Name', 'Category', ...(canManageStockItems ? ['Purchase Price'] : []), 'Sell Price', 'Quantity', 'Min Qty', ...(canManageStockItems ? ['Actions'] : [])].map(h => (
                         <th key={h} className="text-left py-3 px-3 font-semibold text-gray-600">{h}</th>
                       ))}
                     </tr>
@@ -263,7 +263,9 @@ export default function StockItems() {
                             </div>
                           </td>
                           <td className="py-3 px-3"><span className="badge bg-gray-100 text-gray-600">{item.category}</span></td>
-                          <td className="py-3 px-3 text-gray-700">₹{item.purchasePrice?.toLocaleString('en-IN')}</td>
+                          {canManageStockItems && (
+                            <td className="py-3 px-3 text-gray-700">₹{item.purchasePrice?.toLocaleString('en-IN')}</td>
+                          )}
                           <td className="py-3 px-3 text-gray-700 font-medium">₹{item.sellPrice?.toLocaleString('en-IN')}</td>
                           <td className="py-3 px-3">
                             <span className={`font-semibold ${isLow ? 'text-orange-600' : 'text-gray-700'}`}>

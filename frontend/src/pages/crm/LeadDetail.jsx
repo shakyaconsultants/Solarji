@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit2, MessageSquare, GitBranch, User, Phone, Mail, MapPin, RefreshCw, Star, Clock, Calendar, ImagePlus, X, Trash2 } from 'lucide-react';
 import api from '../../api/axios';
@@ -11,7 +11,7 @@ import { useDataCache } from '../../context/DataCacheContext';
 const MAX_NOTE_IMAGES = 6;
 const MAX_NOTE_IMAGE_MB = 10;
 
-const STAGES = ['Lead', 'Calling', 'Visit', 'Filing', 'Loan Filing', 'Loan Process', 'Installation', 'Kesco Filing', 'Kesco Process', 'Meter Install', 'Commission'];
+const STAGES = ['Lead', 'Calling', 'Visit', 'Filing', 'Loan Filing', 'Loan Process', 'Loan Release', 'Installation', 'Kesco Filing', 'Kesco Process', 'Meter Install', 'Subsidy Apply', 'Subsidy Release', 'Commission'];
 
 const stageColors = {
   'Lead': 'bg-gray-100 text-gray-700 border-gray-300',
@@ -20,10 +20,13 @@ const stageColors = {
   'Filing': 'bg-yellow-100 text-yellow-700 border-yellow-300',
   'Loan Filing': 'bg-orange-100 text-orange-700 border-orange-300',
   'Loan Process': 'bg-orange-200 text-orange-800 border-orange-400',
-  'Installation': 'bg-green-100 text-green-700 border-green-300',
+  'Loan Release': 'bg-green-100 text-green-700 border-green-300',
+  'Installation': 'bg-green-200 text-green-800 border-green-400',
   'Kesco Filing': 'bg-teal-100 text-teal-700 border-teal-300',
   'Kesco Process': 'bg-cyan-100 text-cyan-700 border-cyan-300',
   'Meter Install': 'bg-indigo-100 text-indigo-700 border-indigo-300',
+  'Subsidy Apply': 'bg-teal-200 text-teal-800 border-teal-400',
+  'Subsidy Release': 'bg-cyan-200 text-cyan-800 border-cyan-400',
   'Commission': 'bg-emerald-100 text-emerald-800 border-emerald-300',
 };
 

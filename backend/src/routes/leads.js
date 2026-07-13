@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const Lead = require('../models/Lead');
 const User = require('../models/User');
@@ -29,6 +29,41 @@ const LEAD_DETAIL_FIELDS = [
   { path: 'stageHistory.movedBy', select: 'name email' },
   { path: 'notes.addedBy', select: 'name email' },
 ];
+
+// Public route - create lead from quotation generator
+router.post('/public', async (req, res) => {
+  try {
+    const { name, phone, email, address, city, requirements, systemSize, source } = req.body;
+    if (!name || !phone) {
+      return res.status(400).json({ message: 'Name and phone number are required' });
+    }
+
+    const admin = await User.findOne({ role: 'admin', isActive: true });
+    if (!admin) {
+      return res.status(500).json({ message: 'No active admin found in the system' });
+    }
+
+    const lead = await Lead.create({
+      name, phone, email, address, city, requirements, systemSize,
+      source: source || 'Quotation Generator',
+      assignedTo: admin._id,
+      createdBy: admin._id,
+      stageHistory: [{
+        stage: 'Lead',
+        assignedTo: admin._id,
+        movedBy: admin._id,
+        note: 'Lead created from Quotation Generator',
+        date: new Date(),
+      }],
+    });
+
+    dashCache.invalidateCrm();
+    dashCache.invalidateAdmin();
+    res.status(201).json(lead);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
 
 router.get('/', protect, async (req, res) => {
   try {

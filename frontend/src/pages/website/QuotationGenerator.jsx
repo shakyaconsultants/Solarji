@@ -1,10 +1,12 @@
-﻿import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Printer, Building2, Zap,
   Battery, Sun, RotateCcw, Home as HomeIcon,
 } from 'lucide-react';
 import logo from '../../assets/solarji logo.jpeg';
+import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 /* ── Constants ─────────────────────────────────────────── */
 const ORANGE   = '#f7941d';
@@ -55,11 +57,11 @@ function numWords(num) {
 }
 
 /* ── Bill of Material generator ──────────────────────── */
-function getBOM(kw, type, sysType, batteries) {
+function getBOM(kw, type, sysType, batteries, panelItemName, inverterItemName, batteryItemName) {
   const wp       = type === 'commercial' ? 600 : 550;
   const cnt      = Math.ceil((kw * 1000) / wp);
-  const panBrand = type === 'commercial' ? 'Adani / Waaree N-Type TopCon' : 'Loom / Adani Mono PERC';
-  const invBrand = sysType === 'onGrid'  ? 'Solis / Delta / Growatt'      : 'Luminous / Microtek';
+  const panBrand = panelItemName || (type === 'commercial' ? 'Adani / Waaree N-Type TopCon' : 'Loom / Adani Mono PERC');
+  const invBrand = inverterItemName || (sysType === 'onGrid' ? 'Solis / Delta / Growatt' : 'Luminous / Microtek');
   const invType  = sysType === 'onGrid'  ? 'On-Grid String Inverter'       : 'Hybrid Inverter';
 
   const rows = [
@@ -86,7 +88,7 @@ function getBOM(kw, type, sysType, batteries) {
   ];
 
   if (sysType !== 'onGrid' && batteries > 0)
-    rows.push(['Maxvolt Lithium Battery', '100 Ah / 48V', `${batteries} Nos`]);
+    rows.push([batteryItemName || 'Maxvolt Lithium Battery', '100 Ah / 48V', `${batteries} Nos`]);
 
   return rows.map(([desc, rating, qty], i) => ({ sno: i + 1, desc, rating, qty }));
 }
@@ -126,9 +128,43 @@ export default function QuotationGenerator() {
   const [qNo]   = useState(() => `SJ-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100)}`);
   const [qDate] = useState(() => new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' }));
 
+  /* state for stock pricing & submission */
+  const [submitting, setSubmitting] = useState(false);
+  const [stockItems, setStockItems] = useState([]);
+
+  useEffect(() => {
+    api.get('/stock/public/items')
+      .then((res) => {
+        setStockItems(res.data.items || []);
+      })
+      .catch((err) => {
+        console.error('Could not fetch stock items:', err);
+      });
+  }, []);
+
+  /* find stock items dynamically */
+  const panelItem = stockItems.find(i => i.category === 'Solar Panel');
+  const inverterItem = stockItems.find(i => i.category === 'Inverter');
+  const structureItem = stockItems.find(i => i.category === 'Structure');
+  const batteryItem = stockItems.find(i => i.category === 'Battery' || i.name.toLowerCase().includes('battery'));
+
+  const panelPrice = panelItem?.sellPrice ?? 17000;
+  const inverterPrice = inverterItem?.sellPrice ?? 35000;
+  const structurePrice = structureItem?.sellPrice ?? 5000;
+  const batteryPrice = batteryItem?.sellPrice ?? 50000;
+
+  const wp = cType === 'commercial' ? 600 : 550;
+  const panelCount = Math.ceil((kw * 1000) / wp);
+  
+  const panelCost = panelCount * panelPrice;
+  const inverterCost = (kw / 5) * inverterPrice;
+  const structureCost = kw * structurePrice;
+  const bosCost = kw * (cType === 'commercial' ? 5000 : 14000);
+  const batteryCost = sType !== 'onGrid' ? bats * batteryPrice : 0;
+
   /* derived */
-  const rate    = RATE[cType] || 60000;
-  const total   = kw * rate + (sType !== 'onGrid' ? bats * BAT_COST : 0);
+  const total   = panelCost + inverterCost + structureCost + bosCost + batteryCost;
+  const rate    = total / kw;
   const subsidy = getSubsidy(kw, cType, sType);
   const net     = total - subsidy;
   const sLabel    = SYS_LABEL[sType];
@@ -139,10 +175,37 @@ export default function QuotationGenerator() {
   const subEligible = cType === 'residential' && sType !== 'offGrid';
   const centralSub  = subEligible ? getCentralSubsidy(kw) : 0;
   const stateSub    = subEligible ? getStateSubsidy(kw)   : 0;
-  const bom       = cType ? getBOM(kw, cType, sType, bats) : [];
 
-  const ok1 = cName.trim() && cPhone.trim();
+  const bom       = cType ? getBOM(kw, cType, sType, bats, panelItem?.name, inverterItem?.name, batteryItem?.name) : [];
+
+  /* Phone number validation: compulsory and must be a valid 10-digit mobile starting with 6-9 */
+  const phoneRegex = /^[6-9]\d{9}$/;
+  const isPhoneValid = phoneRegex.test(cPhone.trim().replace(/[- ]/g, ''));
+  const ok1 = cName.trim() && isPhoneValid;
   const ok2 = cType && sType && kw > 0;
+
+  const handleGenerate = async () => {
+    if (!ok2) return;
+    setSubmitting(true);
+    try {
+      await api.post('/leads/public', {
+        name: cName,
+        phone: cPhone,
+        address: cAddr,
+        city: cCity,
+        requirements: `${kw} kWp ${sType} Solar system (${cType})`,
+        systemSize: `${kw} kW`,
+        source: 'Quotation Generator'
+      });
+      setStep(3);
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not save lead details, but generating quotation.');
+      setStep(3);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   /* ── Shared table header / cell atoms ── */
   const TH = ({ children, right }) => (
@@ -264,7 +327,12 @@ export default function QuotationGenerator() {
               <div>
                 <Lbl>Phone Number *</Lbl>
                 <input className="input" type="tel" value={cPhone} onChange={e => setCPhone(e.target.value)}
-                  placeholder="+91 XXXXX XXXXX"/>
+                  placeholder="e.g. 9876543210"/>
+                {cPhone && !isPhoneValid && (
+                  <p style={{ color: '#ef4444', fontSize: '.72rem', marginTop: 4, fontWeight: 600 }}>
+                    Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)
+                  </p>
+                )}
               </div>
               <div>
                 <Lbl>Installation Address</Lbl>
@@ -451,13 +519,13 @@ export default function QuotationGenerator() {
                          fontWeight:700, cursor:'pointer' }}>
                 <ArrowLeft size={15}/> Back
               </button>
-              <button disabled={!ok2} onClick={() => setStep(3)}
+              <button disabled={!ok2 || submitting} onClick={handleGenerate}
                 style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7,
                          padding:'12px', borderRadius:12, border:'none',
-                         background: ok2 ? ORANGE : '#e5e7eb', color: ok2 ? WHITE : '#9ca3af',
-                         fontWeight:800, fontSize:'.95rem', cursor: ok2 ? 'pointer' : 'not-allowed',
-                         boxShadow: ok2 ? '0 4px 16px rgba(247,148,29,.3)' : 'none', transition:'all .2s' }}>
-                Generate Quotation <ArrowRight size={17}/>
+                         background: ok2 && !submitting ? ORANGE : '#e5e7eb', color: ok2 && !submitting ? WHITE : '#9ca3af',
+                         fontWeight:800, fontSize:'.95rem', cursor: ok2 && !submitting ? 'pointer' : 'not-allowed',
+                         boxShadow: ok2 && !submitting ? '0 4px 16px rgba(247,148,29,.3)' : 'none', transition:'all .2s' }}>
+                {submitting ? 'Saving Lead...' : 'Generate Quotation'} <ArrowRight size={17}/>
               </button>
             </div>
           </div>

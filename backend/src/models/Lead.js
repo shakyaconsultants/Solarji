@@ -1,9 +1,9 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const STAGES = [
   'Lead', 'Calling', 'Visit', 'Filing',
-  'Loan Filing', 'Loan Process', 'Installation',
-  'Kesco Filing', 'Kesco Process', 'Meter Install', 'Commission'
+  'Loan Filing', 'Loan Process', 'Loan Release', 'Installation',
+  'Kesco Filing', 'Kesco Process', 'Meter Install', 'Subsidy Apply', 'Subsidy Release', 'Commission'
 ];
 
 const stageHistorySchema = new mongoose.Schema({

@@ -5,7 +5,7 @@ const User = require('../models/User');
 const StockItem = require('../models/StockItem');
 const StockVoucher = require('../models/StockVoucher');
 const QuotationTemplate = require('../models/QuotationTemplate');
-const { protect, adminOnly, stockAccess, canViewAllLeads } = require('../middleware/auth');
+const { protect, adminOnly, stockAccess, canViewAllLeads, isAdmin } = require('../middleware/auth');
 const { sendError } = require('../utils/sendError');
 const dashCache = require('../utils/dashboardCache');
 
@@ -128,9 +128,12 @@ router.get('/admin', protect, adminOnly, async (req, res) => {
 
 router.get('/stock', protect, stockAccess, async (req, res) => {
   try {
-    const key = dashCache.stockKey();
+    const isAdminUser = isAdmin(req.user);
+    const key = dashCache.stockKey(isAdminUser);
     const cached = dashCache.getCached(key);
     if (cached) return res.json(cached);
+
+    const voucherFilter = isAdminUser ? {} : { type: 'SELL' };
 
     const [summaryAgg, lowStock, previewItems, recentVouchers, totalVouchers] = await Promise.all([
       StockItem.aggregate([
@@ -157,12 +160,12 @@ router.get('/stock', protect, stockAccess, async (req, res) => {
         .sort({ name: 1 })
         .limit(8)
         .lean(),
-      StockVoucher.find()
+      StockVoucher.find(voucherFilter)
         .select('voucherNumber party type totalAmount createdAt')
         .sort({ createdAt: -1 })
         .limit(6)
         .lean(),
-      StockVoucher.countDocuments(),
+      StockVoucher.countDocuments(voucherFilter),
     ]);
 
     const summary = summaryAgg[0] || { totalItems: 0, totalValue: 0 };
@@ -170,7 +173,7 @@ router.get('/stock', protect, stockAccess, async (req, res) => {
     const payload = {
       stats: {
         totalItems: summary.totalItems,
-        totalValue: summary.totalValue,
+        totalValue: isAdminUser ? summary.totalValue : 0,
         lowStockCount: lowStock.length,
         totalVouchers,
       },

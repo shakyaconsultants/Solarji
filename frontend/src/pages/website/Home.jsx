@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sun, Zap, Shield, Award, Phone, Mail, MapPin,
          ArrowRight, BarChart3, Package, CheckCircle, Star, Layers, Menu, X } from 'lucide-react';

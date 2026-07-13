@@ -1,13 +1,26 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const StockItem = require('../models/StockItem');
 const StockVoucher = require('../models/StockVoucher');
 const {
-  protect, stockAccess, stockItemManage, stockTransact,
+  protect, stockAccess, stockItemManage, stockTransact, isAdmin,
 } = require('../middleware/auth');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { sendError } = require('../utils/sendError');
 const dashCache = require('../utils/dashboardCache');
+
+// Public route - get active stock items list for Quotation page
+router.get('/public/items', async (req, res) => {
+  try {
+    const items = await StockItem.find({ isActive: true })
+      .select('name category unit sellPrice')
+      .sort({ name: 1 })
+      .lean();
+    res.json({ items });
+  } catch (err) {
+    sendError(res, err, 'Could not load public stock items.');
+  }
+});
 
 router.use(protect);
 
@@ -55,13 +68,17 @@ function buildStockBulkOps(changes) {
 // Stock Items
 router.get('/items', stockAccess, async (req, res) => {
   try {
+    const isAdminUser = isAdmin(req.user);
     if (req.query.picker === '1') {
       const search = (req.query.search || '').trim();
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 100));
       const filter = { isActive: true };
       if (search) filter.name = { $regex: search, $options: 'i' };
+      const selectFields = isAdminUser
+        ? 'name quantity unit purchasePrice sellPrice'
+        : 'name quantity unit sellPrice';
       const items = await StockItem.find(filter)
-        .select('name quantity unit purchasePrice sellPrice')
+        .select(selectFields)
         .sort({ name: 1 })
         .limit(limit)
         .lean();
@@ -78,8 +95,13 @@ router.get('/items', stockAccess, async (req, res) => {
       ];
     }
 
+    const query = StockItem.find(filter).sort({ name: 1 }).skip(skip).limit(limit);
+    if (!isAdminUser) {
+      query.select('-purchasePrice');
+    }
+
     const [items, total] = await Promise.all([
-      StockItem.find(filter).sort({ name: 1 }).skip(skip).limit(limit),
+      query,
       StockItem.countDocuments(filter),
     ]);
 
@@ -161,6 +183,11 @@ router.get('/vouchers', stockAccess, async (req, res) => {
     const filter = {};
     if (req.query.type) filter.type = req.query.type;
 
+    const isAdminUser = isAdmin(req.user);
+    if (!isAdminUser) {
+      filter.type = 'SELL';
+    }
+
     const [vouchers, total, summaryAgg] = await Promise.all([
       StockVoucher.find(filter)
         .populate('createdBy', 'name')
@@ -193,6 +220,11 @@ router.get('/vouchers/:id', stockAccess, async (req, res) => {
       .populate('createdBy', 'name')
       .populate('items.item');
     if (!voucher) return res.status(404).json({ message: 'Voucher not found' });
+
+    if (voucher.type === 'ADD' && !isAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only admins can access Purchase Vouchers' });
+    }
+
     res.json(voucher);
   } catch (err) {
     sendError(res, err, 'Could not load voucher details.');
@@ -203,6 +235,10 @@ router.delete('/vouchers/:id', stockTransact, async (req, res) => {
   try {
     const voucher = await StockVoucher.findById(req.params.id).populate('items.item');
     if (!voucher) return res.status(404).json({ message: 'Voucher not found' });
+
+    if (voucher.type === 'ADD' && !isAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only admins can delete Purchase Vouchers' });
+    }
 
     const reverseType = voucher.type === 'ADD' ? 'SELL' : 'ADD';
     const changes = new Map();
@@ -228,6 +264,9 @@ router.delete('/vouchers/:id', stockTransact, async (req, res) => {
 router.post('/vouchers', stockTransact, async (req, res) => {
   try {
     const { type, items, party, partyAddress, note, date } = req.body;
+    if (type === 'ADD' && !isAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only admins can create Purchase Vouchers' });
+    }
     if (!items?.length) {
       return res.status(400).json({ message: 'At least one item is required' });
     }

@@ -10,9 +10,10 @@ function adminKey() {
   return 'dash:admin';
 }
 
-function stockKey() {
-  return 'dash:stock';
+function stockKey(isAdmin) {
+  return `dash:stock:${isAdmin ? 'admin' : 'staff'}`;
 }
+
 
 function getCached(key) {
   return cache.get(key);

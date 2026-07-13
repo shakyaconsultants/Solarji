@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import { hashPassword } from '../api/crypto';
 import {

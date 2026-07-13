@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, ShoppingCart, Package, Calendar, FileSpreadsheet, Eye } from 'lucide-react';
 import api from '../../api/axios';
@@ -15,7 +15,7 @@ const todayISO = () => new Date().toISOString().split('T')[0];
 export default function VoucherForm({ type }) {
   const navigate = useNavigate();
   const { addStockVoucher } = useDataCache();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [stockItems, setStockItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [party, setParty] = useState('');
@@ -33,11 +33,17 @@ export default function VoucherForm({ type }) {
   const addressLabel = isSell ? 'Customer Address' : 'Supplier Address';
 
   useEffect(() => {
+    if (type === 'ADD' && !isAdmin) {
+      toast.error('Only admins can record purchases');
+      navigate('/stock');
+      return;
+    }
+
     api.get('/stock/items', { params: { picker: 1, limit: 100 } })
       .then((res) => setStockItems(res.data.items || []))
       .catch((err) => showApiError(err, 'Could not load stock items for voucher.'))
       .finally(() => setItemsLoading(false));
-  }, []);
+  }, [type, isAdmin, navigate]);
 
   const handleItemChange = (idx, itemId) => {
     const stockItem = stockItems.find((i) => i._id === itemId);
@@ -258,6 +264,8 @@ export default function VoucherForm({ type }) {
                           value={row.price}
                           onChange={(e) => handleRowChange(idx, 'price', e.target.value)}
                           placeholder="0"
+                          readOnly={isSell}
+                          style={isSell ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                         />
                       </td>
                       <td className="py-2 px-2 text-right font-medium text-gray-700">

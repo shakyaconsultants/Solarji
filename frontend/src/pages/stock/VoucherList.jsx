@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, ShoppingCart, Package, Trash2, Printer, X, Loader2 } from 'lucide-react';
 import api from '../../api/axios';
@@ -23,7 +23,7 @@ export default function VoucherList() {
   const [summary, setSummary] = useState({ purchase: 0, sales: 0 });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { canTransactStock } = useAuth();
+  const { canTransactStock, isAdmin } = useAuth();
   const { invalidateDashboardStock } = useDataCache();
 
   useEffect(() => {
@@ -97,37 +97,43 @@ export default function VoucherList() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Voucher History</h1>
           <div className="flex gap-2">
-            <button onClick={() => navigate('/stock/voucher/add')} className="btn-success gap-2">
-              <Package className="w-4 h-4" /> Purchase
-            </button>
+            {isAdmin && (
+              <button onClick={() => navigate('/stock/voucher/add')} className="btn-success gap-2">
+                <Package className="w-4 h-4" /> Purchase
+              </button>
+            )}
             <button onClick={() => navigate('/stock/voucher/sell')} className="btn-primary gap-2">
               <ShoppingCart className="w-4 h-4" /> Sell
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6 max-[480px]:grid-cols-1">
-          <div className="card border-l-4 border-green-500">
-            <p className="text-sm text-gray-500">Total Purchases</p>
-            <p className="text-2xl font-bold text-green-600">₹{summary.purchase.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-          </div>
+        <div className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-4 mb-6 max-[480px]:grid-cols-1`}>
+          {isAdmin && (
+            <div className="card border-l-4 border-green-500">
+              <p className="text-sm text-gray-500">Total Purchases</p>
+              <p className="text-2xl font-bold text-green-600">₹{summary.purchase.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+            </div>
+          )}
           <div className="card border-l-4 border-solar-500">
             <p className="text-sm text-gray-500">Total Sales</p>
             <p className="text-2xl font-bold text-solar-600">₹{summary.sales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
           </div>
         </div>
 
-        <div className="card mb-4 flex gap-3">
-          {['', 'ADD', 'SELL'].map(t => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              className={`btn ${typeFilter === t ? 'btn-primary' : 'btn-secondary'} text-xs`}
-            >
-              {t === '' ? 'All' : t === 'ADD' ? 'Purchases' : 'Sales'}
-            </button>
-          ))}
-        </div>
+        {isAdmin && (
+          <div className="card mb-4 flex gap-3">
+            {['', 'ADD', 'SELL'].map(t => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`btn ${typeFilter === t ? 'btn-primary' : 'btn-secondary'} text-xs`}
+              >
+                {t === '' ? 'All' : t === 'ADD' ? 'Purchases' : 'Sales'}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="card">
           {loading ? <div className="text-center py-12 text-gray-400">Loading vouchers...</div> : (
@@ -178,7 +184,7 @@ export default function VoucherList() {
                             >
                               <Printer className="w-3.5 h-3.5" />
                             </button>
-                            {canTransactStock && (
+                            {canTransactStock && (v.type !== 'ADD' || isAdmin) && (
                               <button
                                 type="button"
                                 onClick={() => handleDelete(v)}
@@ -279,7 +285,7 @@ export default function VoucherList() {
                   >
                     <Printer className="w-4 h-4" /> Full Preview
                   </button>
-                  {canTransactStock && (
+                  {canTransactStock && (selected.type !== 'ADD' || isAdmin) && (
                     <button
                       type="button"
                       onClick={() => handleDelete(selected)}

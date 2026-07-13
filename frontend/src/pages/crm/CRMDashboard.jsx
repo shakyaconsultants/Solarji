@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Target, Plus, Clock, CheckCircle, ArrowRight, Activity, Star, RotateCcw, RefreshCw } from 'lucide-react';
 import api from '../../api/axios';
@@ -10,15 +10,16 @@ import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 
 const ORANGE = '#f7941d';
-const STAGES = ['Lead','Calling','Visit','Filing','Loan Filing','Loan Process','Installation','Kesco Filing','Kesco Process','Meter Install','Commission'];
+const STAGES = ['Lead','Calling','Visit','Filing','Loan Filing','Loan Process','Loan Release','Installation','Kesco Filing','Kesco Process','Meter Install','Subsidy Apply','Subsidy Release','Commission'];
 
 const STAGE_STYLE = {
-  'Lead':          { bg:'#eff6ff', color:'#1d4ed8' }, 'Calling':      { bg:'#f0fdf4', color:'#15803d' },
-  'Visit':         { bg:'#fdf4ff', color:'#7e22ce' }, 'Filing':       { bg:'#fefce8', color:'#854d0e' },
-  'Loan Filing':   { bg:'#fff7ed', color:'#c2410c' }, 'Loan Process': { bg:'#fff7ed', color:'#ea580c' },
-  'Installation':  { bg:'#f0fdf4', color:'#166534' }, 'Kesco Filing': { bg:'#f0fdfa', color:'#0f766e' },
-  'Kesco Process': { bg:'#ecfeff', color:'#0e7490' }, 'Meter Install':{ bg:'#eef2ff', color:'#4338ca' },
-  'Commission':    { bg:'rgba(247,148,29,.12)',  color:ORANGE },
+  'Lead':            { bg:'#eff6ff', color:'#1d4ed8' }, 'Calling':         { bg:'#f0fdf4', color:'#15803d' },
+  'Visit':           { bg:'#fdf4ff', color:'#7e22ce' }, 'Filing':          { bg:'#fefce8', color:'#854d0e' },
+  'Loan Filing':     { bg:'#fff7ed', color:'#c2410c' }, 'Loan Process':    { bg:'#fff7ed', color:'#ea580c' },
+  'Loan Release':    { bg:'#ecfdf5', color:'#047857' }, 'Installation':    { bg:'#f0fdf4', color:'#166534' },
+  'Kesco Filing':    { bg:'#f0fdfa', color:'#0f766e' }, 'Kesco Process':    { bg:'#ecfeff', color:'#0e7490' },
+  'Meter Install':   { bg:'#eef2ff', color:'#4338ca' }, 'Subsidy Apply':    { bg:'#f0fdfa', color:'#0d9488' },
+  'Subsidy Release': { bg:'#ecfeff', color:'#0891b2' }, 'Commission':       { bg:'rgba(247,148,29,.12)',  color:ORANGE },
 };
 
 function StatCard({ label, value, icon:Icon, color, sub }) {

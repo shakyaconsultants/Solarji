@@ -1,10 +1,11 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, ShoppingCart, FileText, Plus, TrendingUp, AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
 import Layout from '../../components/Layout';
 import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 import { useDataCache } from '../../context/DataCacheContext';
+import { useAuth } from '../../context/AuthContext';
 
 const ORANGE = '#f7941d';
 
@@ -30,6 +31,7 @@ export default function StockDashboard() {
   const navigate = useNavigate();
   const { dashboardStock, fetchDashboardStock, isLoading } = useDataCache();
   const [refreshing, setRefreshing] = useState(false);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     fetchDashboardStock().catch((err) => showApiError(err, 'Could not load stock dashboard.'));
@@ -55,7 +57,7 @@ export default function StockDashboard() {
 
   const statCards = [
     { label:'Total Items',     value:stats.totalItems,   icon:Package,       color:'#6366f1' },
-    { label:'Inventory Value', value:`₹${(stats.totalValue / 1000).toFixed(0)}K`, icon:TrendingUp, color:ORANGE, sub:'at purchase cost' },
+    ...(isAdmin ? [{ label:'Inventory Value', value:`₹${(stats.totalValue / 1000).toFixed(0)}K`, icon:TrendingUp, color:ORANGE, sub:'at purchase cost' }] : []),
     { label:'Low Stock',       value:stats.lowStockCount, icon:AlertTriangle, color:'#f43f5e' },
     { label:'Total Vouchers',  value:stats.totalVouchers, icon:FileText,      color:'#10b981' },
   ];
@@ -80,7 +82,9 @@ export default function StockDashboard() {
             >
               <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             </button>
-            <button onClick={()=>navigate('/stock/voucher/add')} className="btn-success"><Plus size={15}/> Purchase</button>
+            {isAdmin && (
+              <button onClick={()=>navigate('/stock/voucher/add')} className="btn-success"><Plus size={15}/> Purchase</button>
+            )}
             <button onClick={()=>navigate('/stock/voucher/sell')} className="btn-primary"><ShoppingCart size={15}/> Sell</button>
           </div>
         </div>

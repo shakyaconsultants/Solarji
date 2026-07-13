@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Target, Trash2 } from 'lucide-react';
 import api from '../../api/axios';
@@ -9,7 +9,7 @@ import { showApiError } from '../../utils/apiError';
 import { useAuth } from '../../context/AuthContext';
 import { useDataCache } from '../../context/DataCacheContext';
 
-const STAGES = ['Lead', 'Calling', 'Visit', 'Filing', 'Loan Filing', 'Loan Process', 'Installation', 'Kesco Filing', 'Kesco Process', 'Meter Install', 'Commission'];
+const STAGES = ['Lead', 'Calling', 'Visit', 'Filing', 'Loan Filing', 'Loan Process', 'Loan Release', 'Installation', 'Kesco Filing', 'Kesco Process', 'Meter Install', 'Subsidy Apply', 'Subsidy Release', 'Commission'];
 const PAGE_SIZE = 20;
 
 const stageColors = {
@@ -19,10 +19,13 @@ const stageColors = {
   'Filing': 'bg-yellow-100 text-yellow-700',
   'Loan Filing': 'bg-orange-100 text-orange-700',
   'Loan Process': 'bg-orange-200 text-orange-800',
-  'Installation': 'bg-green-100 text-green-700',
+  'Loan Release': 'bg-green-100 text-green-700',
+  'Installation': 'bg-green-200 text-green-800',
   'Kesco Filing': 'bg-teal-100 text-teal-700',
   'Kesco Process': 'bg-cyan-100 text-cyan-700',
   'Meter Install': 'bg-indigo-100 text-indigo-700',
+  'Subsidy Apply': 'bg-teal-200 text-teal-800',
+  'Subsidy Release': 'bg-cyan-200 text-cyan-800',
   'Commission': 'bg-emerald-100 text-emerald-800',
 };
 
