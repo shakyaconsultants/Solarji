@@ -386,7 +386,7 @@ export default function Home() {
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:'1.25rem' }}>
             {[
-              { icon:Phone,  title:'Call Us',  lines:['+91 94519 08101','+91 87654 32109'] },
+              { icon:Phone,  title:'Call Us',  lines:['+91 94519 08101'] },
               { icon:Mail,   title:'Email Us', lines:['info@solarji.co.in'] },
               { icon:MapPin, title:'Visit Us', lines:['Shop No. 5, Solar Market','Kanpur, Uttar Pradesh'] },
             ].map(({icon:Icon,title,lines})=>(
