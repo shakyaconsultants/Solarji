@@ -18,6 +18,8 @@ const leadSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   phone: { type: String, required: true, trim: true },
   email: { type: String, trim: true },
+  panNumber: { type: String, trim: true },
+  aadhaarNumber: { type: String, trim: true },
   address: { type: String, trim: true },
   city: { type: String, trim: true },
   requirements: { type: String },
@@ -41,6 +43,14 @@ const leadSchema = new mongoose.Schema({
     addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     date: { type: Date, default: Date.now },
   }],
+  documents: {
+    aadhaar: { url: String, publicId: String, originalName: String },
+    pan: { url: String, publicId: String, originalName: String },
+    passbook: { url: String, publicId: String, originalName: String },
+    houseTax: { url: String, publicId: String, originalName: String },
+    electricityBill: { url: String, publicId: String, originalName: String },
+    rooftopPhoto: { url: String, publicId: String, originalName: String },
+  },
 }, { timestamps: true });
 
 leadSchema.statics.STAGES = STAGES;

@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, MessageSquare, GitBranch, User, Phone, Mail, MapPin, RefreshCw, Star, Clock, Calendar, ImagePlus, X, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft, Edit2, MessageSquare, GitBranch, User, Phone, Mail, MapPin,
+  RefreshCw, Star, Clock, Calendar, ImagePlus, X, Trash2,
+  FileText, CreditCard, Building, Receipt, Camera, Upload, ExternalLink, Eye
+} from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
 import toast from 'react-hot-toast';
@@ -10,6 +14,15 @@ import { useDataCache } from '../../context/DataCacheContext';
 
 const MAX_NOTE_IMAGES = 6;
 const MAX_NOTE_IMAGE_MB = 10;
+
+const DOCUMENT_SLOTS = [
+  { id: 'aadhaar', label: 'Aadhaar Card', icon: CreditCard },
+  { id: 'pan', label: 'PAN Card', icon: CreditCard },
+  { id: 'passbook', label: 'Bank Passbook', icon: Building },
+  { id: 'houseTax', label: 'House Tax / Property Paper', icon: FileText },
+  { id: 'electricityBill', label: 'Electricity Bill', icon: Receipt },
+  { id: 'rooftopPhoto', label: 'Rooftop Photo', icon: Camera },
+];
 
 const STAGES = ['Lead', 'Calling', 'Visit', 'Filing', 'Loan Filing', 'Loan Process', 'Loan Release', 'Installation', 'Kesco Filing', 'Kesco Process', 'Meter Install', 'Subsidy Apply', 'Subsidy Release', 'Commission'];
 
@@ -73,6 +86,28 @@ export default function LeadDetail() {
   const [moveUser, setMoveUser] = useState('');
   const [moveNote, setMoveNote] = useState('');
   const [moving, setMoving] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(null);
+
+  const handleUploadDoc = async (docId, file) => {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      return toast.error('File size cannot exceed 10MB');
+    }
+    setUploadingDoc(docId);
+    try {
+      const formData = new FormData();
+      formData.append(docId, file);
+      await api.put(`/leads/${id}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      await refreshLeadDetail(id);
+      toast.success('Document uploaded successfully!');
+    } catch (err) {
+      showApiError(err, 'Could not upload document.');
+    } finally {
+      setUploadingDoc(null);
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -263,6 +298,8 @@ export default function LeadDetail() {
                   { icon: User, label: 'Name', value: lead.name },
                   { icon: Phone, label: 'Phone', value: lead.phone },
                   { icon: Mail, label: 'Email', value: lead.email || '—' },
+                  { icon: CreditCard, label: 'PAN Card Number', value: lead.panNumber || '—' },
+                  { icon: CreditCard, label: 'Aadhaar Number', value: lead.aadhaarNumber || '—' },
                   { icon: MapPin, label: 'City', value: lead.city || '—' },
                   { icon: MapPin, label: 'Address', value: lead.address || '—' },
                   { icon: User, label: 'System Size', value: lead.systemSize || '—' },
@@ -284,6 +321,78 @@ export default function LeadDetail() {
                   <p className="text-sm text-gray-700">{lead.requirements}</p>
                 </div>
               )}
+            </div>
+
+            {/* Customer Documents */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-solar-500" /> Customer Documents
+                </h3>
+                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+                  {Object.keys(lead.documents || {}).filter(k => lead.documents[k]?.url).length} / 6 Uploaded
+                </span>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3 text-sm">
+                {DOCUMENT_SLOTS.map((slot) => {
+                  const Icon = slot.icon;
+                  const doc = lead.documents?.[slot.id];
+                  const hasDoc = Boolean(doc && doc.url);
+                  const isUploading = uploadingDoc === slot.id;
+
+                  return (
+                    <div
+                      key={slot.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                        hasDoc ? 'bg-emerald-50/40 border-emerald-200' : 'bg-gray-50/80 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`p-2 rounded-lg flex-shrink-0 ${hasDoc ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-gray-800 truncate">{slot.label}</p>
+                          <p className="text-[11px] text-gray-500 truncate">
+                            {hasDoc ? (doc.originalName || 'Uploaded Document') : 'Not uploaded'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {hasDoc && (
+                          <button
+                            type="button"
+                            onClick={() => setLightbox(doc.url)}
+                            className="btn-secondary py-1 px-2 text-xs flex items-center gap-1"
+                            title="View document"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-gray-600" />
+                            <span>View</span>
+                          </button>
+                        )}
+
+                        <label className="btn-secondary py-1 px-2 text-xs cursor-pointer flex items-center gap-1 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200">
+                          <Upload className="w-3.5 h-3.5 text-gray-600" />
+                          <span>{isUploading ? 'Uploading...' : hasDoc ? 'Update' : 'Upload'}</span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*,.pdf"
+                            disabled={isUploading}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadDoc(slot.id, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Notes */}

@@ -3,11 +3,52 @@ const router = express.Router();
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 const { protect, adminOnly, canViewAllLeads } = require('../middleware/auth');
-const { upload, uploadMany, destroyMany } = require('../middleware/upload');
+const { upload, uploadMany, destroyMany, compressAndUpload } = require('../middleware/upload');
+const { isCloudinaryConfigured } = require('../config/cloudinary');
 const { buildLeadFilter } = require('../utils/leads');
 const { tokenPayloadForUser } = require('../utils/token');
 const { sendError } = require('../utils/sendError');
 const dashCache = require('../utils/dashboardCache');
+const { sendLeadStageNotification } = require('../utils/mail');
+
+const docFields = [
+  { name: 'aadhaar', maxCount: 1 },
+  { name: 'pan', maxCount: 1 },
+  { name: 'passbook', maxCount: 1 },
+  { name: 'houseTax', maxCount: 1 },
+  { name: 'electricityBill', maxCount: 1 },
+  { name: 'rooftopPhoto', maxCount: 1 },
+];
+
+async function processDocUploads(files, leadId) {
+  const resultDocs = {};
+  if (!files) return resultDocs;
+
+  const docKeys = ['aadhaar', 'pan', 'passbook', 'houseTax', 'electricityBill', 'rooftopPhoto'];
+
+  for (const key of docKeys) {
+    if (files[key] && files[key][0]) {
+      const file = files[key][0];
+      if (isCloudinaryConfigured()) {
+        const uploaded = await compressAndUpload(file, { folder: `solarji/leads/${leadId}/documents` });
+        resultDocs[key] = {
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          originalName: file.originalname,
+        };
+      } else {
+        const b64 = file.buffer.toString('base64');
+        const mime = file.mimetype || 'image/jpeg';
+        resultDocs[key] = {
+          url: `data:${mime};base64,${b64}`,
+          publicId: `dev_${Date.now()}`,
+          originalName: file.originalname,
+        };
+      }
+    }
+  }
+  return resultDocs;
+}
 
 // Calculate points earned based on days elapsed since stage was entered
 // Same day = +5, each extra day -1, can go negative
@@ -205,11 +246,16 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, upload.fields(docFields), async (req, res) => {
   try {
-    const { name, phone, email, address, city, requirements, systemSize, source, assignedTo } = req.body;
-    const lead = await Lead.create({
-      name, phone, email, address, city, requirements, systemSize, source,
+    const { name, phone, email, panNumber, aadhaarNumber, address, city, requirements, systemSize, source, assignedTo } = req.body;
+    
+    if (!name || !phone) {
+      return res.status(400).json({ message: 'Name and phone number are required' });
+    }
+
+    const lead = new Lead({
+      name, phone, email, panNumber, aadhaarNumber, address, city, requirements, systemSize, source,
       assignedTo: assignedTo || req.user._id,
       createdBy: req.user._id,
       stageHistory: [{
@@ -220,10 +266,35 @@ router.post('/', protect, async (req, res) => {
         date: new Date(),
       }],
     });
+
+    if (req.files && Object.keys(req.files).length > 0) {
+      lead.documents = await processDocUploads(req.files, lead._id);
+    }
+
+    await lead.save();
     await lead.populate(LEAD_LIST_FIELDS);
     dashCache.invalidateCrm();
     dashCache.invalidateAdmin();
     res.status(201).json(lead);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+router.put('/:id/documents', protect, upload.fields(docFields), async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+    const newDocs = await processDocUploads(req.files, lead._id);
+    lead.documents = {
+      ...(lead.documents ? lead.documents.toObject() : {}),
+      ...newDocs,
+    };
+
+    await lead.save();
+    await lead.populate(LEAD_DETAIL_FIELDS);
+    res.json(lead);
   } catch (err) {
     sendError(res, err);
   }
@@ -273,6 +344,13 @@ router.put('/:id/stage', protect, async (req, res) => {
     await lead.save();
     await lead.populate(LEAD_LIST_FIELDS);
     dashCache.invalidateCrm();
+
+    if (isStageChange && ['Filing', 'Loan Process', 'Commission'].includes(stage)) {
+      sendLeadStageNotification(lead, stage)
+        .then((result) => console.log(`📧 Stage email notification (${stage}) result for ${lead.email}:`, result))
+        .catch((err) => console.error(`❌ Stage notification email failed (${stage}):`, err));
+    }
+
     res.json({ ...lead.toObject(), ...tokenExtras });
   } catch (err) {
     sendError(res, err);
