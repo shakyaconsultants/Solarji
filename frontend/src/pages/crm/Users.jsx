@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Trash2, X, Eye, EyeOff, RotateCcw, Search } from 'lucide-react';
 import api from '../../api/axios';
 import { hashPassword } from '../../api/crypto';
@@ -26,7 +26,7 @@ export default function Users() {
   const { user: currentUser } = useAuth();
   const { invalidateDashboardCrm, invalidateAssignees } = useDataCache();
 
-  const emptyForm = { name: '', email: '', password: '', role: 'user', phone: '', isActive: true, handlesComplaints: false };
+  const emptyForm = { name: '', email: '', password: '', role: 'user', phone: '', empCode: '', isActive: true, handlesComplaints: false };
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function Users() {
   const openCreate = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
   const openEdit = (u) => {
     setEditing(u);
-    setForm({ name: u.name, email: u.email, password: '', role: u.role, phone: u.phone || '', isActive: u.isActive, handlesComplaints: Boolean(u.handlesComplaints) });
+    setForm({ name: u.name, email: u.email, password: '', role: u.role, phone: u.phone || '', empCode: u.empCode || '', isActive: u.isActive, handlesComplaints: Boolean(u.handlesComplaints) });
     setShowModal(true);
   };
 
@@ -150,7 +150,7 @@ export default function Users() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               className="input pl-9"
-              placeholder="Search by name or email..."
+              placeholder="Search by name, email or employee code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -184,8 +184,13 @@ export default function Users() {
                             <div className="w-8 h-8 bg-solar-100 rounded-full flex items-center justify-center text-solar-700 font-bold text-xs">
                               {u.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-medium text-gray-800">{u.name}</span>
-                            {u._id === currentUser?._id && <span className="badge bg-solar-100 text-solar-700">You</span>}
+                            <div>
+                              <div className="font-medium text-gray-800 flex items-center gap-2">
+                                {u.name}
+                                {u._id === currentUser?._id && <span className="badge bg-solar-100 text-solar-700">You</span>}
+                              </div>
+                              {u.empCode && <span className="text-xs text-gray-400 font-mono">Code: {u.empCode}</span>}
+                            </div>
                           </div>
                         </td>
                         <td className="py-3 px-3 text-gray-600">{u.email}</td>
@@ -288,9 +293,13 @@ export default function Users() {
                     </select>
                   </div>
                   <div>
-                    <label className="label">Phone</label>
-                    <input className="input" value={form.phone} onChange={e => f('phone', e.target.value)} placeholder="+91 XXXXX" />
+                    <label className="label">Employee Code</label>
+                    <input className="input" value={form.empCode} onChange={e => f('empCode', e.target.value)} placeholder="EMP001" />
                   </div>
+                </div>
+                <div>
+                  <label className="label">Phone</label>
+                  <input className="input" value={form.phone} onChange={e => f('phone', e.target.value)} placeholder="+91 XXXXX" />
                 </div>
                 {editing && (
                   <div className="flex items-center gap-2">

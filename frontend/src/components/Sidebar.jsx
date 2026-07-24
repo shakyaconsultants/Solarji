@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Target, Package, ShoppingCart, FileText,
-  LogOut, Settings, PlusCircle, BarChart3, Home, Layers, ChevronRight, X, AlertCircle,
+  LogOut, Settings, PlusCircle, BarChart3, Home, Layers, ChevronRight, X, AlertCircle, Clock,
 } from 'lucide-react';
 import logo from '../assets/solarji logo.jpeg';
 import { roleLabel } from '../utils/roles';
@@ -13,6 +13,7 @@ const CRM_LINKS = [
   { to:'/crm/leads/new', label:'New Lead',         icon:PlusCircle },
   { to:'/crm/complaints', label:'Complaints',     icon:AlertCircle },
   { to:'/crm/orders',     label:'Shop Orders',     icon:ShoppingCart },
+  { to:'/crm/attendance', label:'Attendance',     icon:Clock },
 ];
 const CRM_TEAM   = [{ to:'/crm/team', label:'Team', icon:Users }];
 const CRM_ADMIN  = [{ to:'/crm/users', label:'User Management', icon:Users }];

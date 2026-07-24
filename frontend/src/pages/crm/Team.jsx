@@ -50,7 +50,10 @@ export default function Team() {
                           <div className="w-8 h-8 bg-solar-100 rounded-full flex items-center justify-center text-solar-700 font-bold text-xs">
                             {u.name.charAt(0).toUpperCase()}
                           </div>
-                          <span className="font-medium text-gray-800">{u.name}</span>
+                          <div>
+                            <div className="font-medium text-gray-800">{u.name}</div>
+                            {u.empCode && <span className="text-xs text-gray-400 font-mono">Code: {u.empCode}</span>}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-3 text-gray-600">{u.email}</td>

@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { protect, adminOnly, teamViewAccess } = require('../middleware/auth');
@@ -10,7 +10,7 @@ const dashCache = require('../utils/dashboardCache');
 router.get('/assignees', protect, async (req, res) => {
   try {
     const users = await User.find({ isActive: true })
-      .select('name role')
+      .select('name role empCode')
       .sort({ name: 1 })
       .lean();
     res.json(users);
@@ -35,7 +35,7 @@ router.get('/complaint-handlers', protect, adminOnly, async (req, res) => {
 router.get('/team', protect, teamViewAccess, async (req, res) => {
   try {
     const users = await User.find({ isActive: true })
-      .select('name email role phone points')
+      .select('name email role phone points empCode')
       .sort({ name: 1 })
       .lean();
     res.json(users);
@@ -53,6 +53,7 @@ router.get('/', protect, adminOnly, async (req, res) => {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
+        { empCode: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -95,17 +96,19 @@ router.post('/:id/reset-points', protect, adminOnly, async (req, res) => {
 
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { name, email, password, role, phone, handlesComplaints } = req.body;
+    const { name, email, password, role, phone, handlesComplaints, empCode } = req.body;
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already registered' });
 
     const user = await User.create({
       name, email, password, role: role || 'user', phone,
+      empCode: empCode ? empCode.trim() : undefined,
       handlesComplaints: Boolean(handlesComplaints),
     });
     dashCache.invalidateAdmin();
     res.status(201).json({
       _id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone,
+      empCode: user.empCode,
       handlesComplaints: user.handlesComplaints,
     });
   } catch (err) {
@@ -115,7 +118,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 
 router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
-    const { name, email, role, phone, isActive, password, handlesComplaints } = req.body;
+    const { name, email, role, phone, isActive, password, handlesComplaints, empCode } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -123,6 +126,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
     if (email) user.email = email;
     if (role) user.role = role;
     if (phone !== undefined) user.phone = phone;
+    if (empCode !== undefined) user.empCode = empCode ? empCode.trim() : undefined;
     if (isActive !== undefined) user.isActive = isActive;
     if (handlesComplaints !== undefined) user.handlesComplaints = Boolean(handlesComplaints);
     if (password) user.password = password;
@@ -135,6 +139,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      empCode: user.empCode,
       isActive: user.isActive,
       handlesComplaints: user.handlesComplaints,
     };

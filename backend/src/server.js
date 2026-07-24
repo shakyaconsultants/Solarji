@@ -43,6 +43,7 @@ app.use('/api/quotations', require('./routes/quotations'));
 app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/attendance', require('./routes/attendance'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'SolarJi API' }));
 
