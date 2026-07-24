@@ -426,131 +426,129 @@ export default function Attendance() {
                     {isAdmin && <th className="py-3 px-4 text-right font-bold text-gray-500">Actions</th>}
                   </tr>
                 </thead>
-                <tbody>
-                  {attendance.map((rec) => {
-                    const isExpanded = expandedId === rec._id;
-                    const hoursWorked = calculateHours(rec.checkIn, rec.checkOut);
+                {attendance.map((rec) => {
+                  const isExpanded = expandedId === rec._id;
+                  const hoursWorked = calculateHours(rec.checkIn, rec.checkOut);
 
-                    return (
-                      <optgroup key={rec._id} className="border-b border-gray-50 hover:bg-gray-50/20">
-                        {/* Main row */}
-                        <tr className="border-b border-gray-50/50">
-                          <td className="py-4 px-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => toggleExpandRow(rec._id)}
-                              className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
-                              aria-label={isExpanded ? "Collapse history" : "Expand history"}
-                            >
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
-                          </td>
-                          <td className="py-4 px-4 font-semibold text-gray-800 whitespace-nowrap">
-                            {formatDate(rec.date)}
-                          </td>
-                          {isAdmin && (
-                            <td className="py-4 px-4">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-solar-100 text-solar-700 font-bold rounded-lg flex items-center justify-center text-xs">
-                                  {rec.user?.name?.charAt(0).toUpperCase() || '?'}
-                                </div>
-                                <div>
-                                  <p className="font-bold text-gray-800 leading-tight">
-                                    {rec.user?.name || 'Unknown User'}
-                                    {rec.user?.empCode && (
-                                      <span className="ml-1.5 text-xxs font-mono bg-solar-50 text-solar-700 px-1 py-0.5 rounded border border-solar-100/50">
-                                        {rec.user.empCode}
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p className="text-xxs text-gray-400 font-medium">{rec.user?.email || 'No email'}</p>
-                                </div>
+                  return (
+                    <tbody key={rec._id} className="border-b border-gray-50 hover:bg-gray-50/20">
+                      {/* Main row */}
+                      <tr className="border-b border-gray-50/50">
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandRow(rec._id)}
+                            className="p-1 hover:bg-gray-150 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+                            aria-label={isExpanded ? "Collapse history" : "Expand history"}
+                          >
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                        </td>
+                        <td className="py-4 px-4 font-semibold text-gray-800 whitespace-nowrap">
+                          {formatDate(rec.date)}
+                        </td>
+                        {isAdmin && (
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-solar-100 text-solar-700 font-bold rounded-lg flex items-center justify-center text-xs">
+                                {rec.user?.name?.charAt(0).toUpperCase() || '?'}
                               </div>
-                            </td>
-                          )}
-                          <td className="py-4 px-4 font-mono font-medium text-emerald-600 whitespace-nowrap">
-                            {formatTime(rec.checkIn)}
-                          </td>
-                          <td className="py-4 px-4 font-mono font-medium text-amber-600 whitespace-nowrap">
-                            {formatTime(rec.checkOut)}
-                          </td>
-                          <td className="py-4 px-4 whitespace-nowrap">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                              hoursWorked !== '—' ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-500'
-                            }`}>
-                              {hoursWorked}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 whitespace-nowrap">
-                            <span className="bg-solar-50 text-solar-700 px-2 py-0.5 rounded font-bold text-xs">
-                              {rec.punches?.length || 0} scans
-                            </span>
-                          </td>
-                          {isAdmin && (
-                            <td className="py-4 px-4 text-right whitespace-nowrap">
-                              <div className="flex justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => openEdit(rec)}
-                                  className="btn-secondary p-2 rounded-xl text-gray-600 hover:text-solar-600 hover:bg-solar-50"
-                                  title="Edit Entry"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(rec._id)}
-                                  className="btn-secondary p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:border-rose-100"
-                                  title="Delete Entry"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-
-                        {/* Expanded details row */}
-                        {isExpanded && (
-                          <tr className="bg-gray-50/40">
-                            <td colSpan={isAdmin ? 8 : 7} className="p-4 border-b border-gray-100">
-                              <div className="max-w-md bg-white border border-gray-100 rounded-xl p-4 shadow-xxs">
-                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                                  <Info className="w-3.5 h-3.5 text-gray-400" />
-                                  Facial recognition Scan Timeline ({rec.punches?.length || 0} scans)
-                                </h4>
-                                <div className="relative border-l-2 border-gray-100 pl-4 ml-2.5 space-y-4 py-1">
-                                  {rec.punches && rec.punches.map((punch, idx) => (
-                                    <div key={idx} className="relative flex items-center gap-3">
-                                      {/* Dots */}
-                                      <div className={`absolute -left-[23px] w-2.5 h-2.5 rounded-full border-2 border-white ${
-                                        punch.type === 'in' ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-amber-500 ring-4 ring-amber-50'
-                                      }`} />
-                                      <span className={`text-xxs font-black px-2 py-0.5 rounded uppercase ${
-                                        punch.type === 'in' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                                      }`}>
-                                        {punch.type === 'in' ? 'In' : 'Out'}
-                                      </span>
-                                      <span className="font-mono text-xs font-semibold text-gray-700">
-                                        {formatTime(punch.time)}
-                                      </span>
-                                      <span className="text-xxs text-gray-400">
-                                        ({new Date(punch.time).toLocaleDateString('en-IN', { hourCycle: 'h23' })})
-                                      </span>
-                                    </div>
-                                  ))}
-                                  {(!rec.punches || rec.punches.length === 0) && (
-                                    <p className="text-xs text-gray-400 italic">No punch details logged.</p>
+                              <div>
+                                <p className="font-bold text-gray-800 leading-tight">
+                                  {rec.user?.name || 'Unknown User'}
+                                  {rec.user?.empCode && (
+                                    <span className="ml-1.5 text-xxs font-mono bg-solar-50 text-solar-700 px-1 py-0.5 rounded border border-solar-100/50">
+                                      {rec.user.empCode}
+                                    </span>
                                   )}
-                                </div>
+                                </p>
+                                <p className="text-xxs text-gray-400 font-medium">{rec.user?.email || 'No email'}</p>
                               </div>
-                            </td>
-                          </tr>
+                            </div>
+                          </td>
                         )}
-                      </optgroup>
-                    );
-                  })}
-                </tbody>
+                        <td className="py-4 px-4 font-mono font-medium text-emerald-600 whitespace-nowrap">
+                          {formatTime(rec.checkIn)}
+                        </td>
+                        <td className="py-4 px-4 font-mono font-medium text-amber-600 whitespace-nowrap">
+                          {formatTime(rec.checkOut)}
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            hoursWorked !== '—' ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {hoursWorked}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span className="bg-solar-50 text-solar-700 px-2 py-0.5 rounded font-bold text-xs">
+                            {rec.punches?.length || 0} scans
+                          </span>
+                        </td>
+                        {isAdmin && (
+                          <td className="py-4 px-4 text-right whitespace-nowrap">
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(rec)}
+                                className="btn-secondary p-2 rounded-xl text-gray-600 hover:text-solar-600 hover:bg-solar-50"
+                                title="Edit Entry"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(rec._id)}
+                                className="btn-secondary p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:border-rose-100"
+                                title="Delete Entry"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+
+                      {/* Expanded details row */}
+                      {isExpanded && (
+                        <tr className="bg-gray-50/40">
+                          <td colSpan={isAdmin ? 8 : 7} className="p-4 border-b border-gray-100">
+                            <div className="max-w-md bg-white border border-gray-100 rounded-xl p-4 shadow-xxs">
+                              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <Info className="w-3.5 h-3.5 text-gray-400" />
+                                Facial recognition Scan Timeline ({rec.punches?.length || 0} scans)
+                              </h4>
+                              <div className="relative border-l-2 border-gray-100 pl-4 ml-2.5 space-y-4 py-1">
+                                {rec.punches && rec.punches.map((punch, idx) => (
+                                  <div key={idx} className="relative flex items-center gap-3">
+                                    {/* Dots */}
+                                    <div className={`absolute -left-[23px] w-2.5 h-2.5 rounded-full border-2 border-white ${
+                                      punch.type === 'in' ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-amber-500 ring-4 ring-amber-50'
+                                    }`} />
+                                    <span className={`text-xxs font-black px-2 py-0.5 rounded uppercase ${
+                                      punch.type === 'in' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                                    }`}>
+                                      {punch.type === 'in' ? 'In' : 'Out'}
+                                    </span>
+                                    <span className="font-mono text-xs font-semibold text-gray-700">
+                                      {formatTime(punch.time)}
+                                    </span>
+                                    <span className="text-xxs text-gray-400">
+                                      ({new Date(punch.time).toLocaleDateString('en-IN', { hourCycle: 'h23' })})
+                                    </span>
+                                  </div>
+                                ))}
+                                {(!rec.punches || rec.punches.length === 0) && (
+                                  <p className="text-xs text-gray-400 italic">No punch details logged.</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  );
+                })}
               </table>
             </div>
           )}
