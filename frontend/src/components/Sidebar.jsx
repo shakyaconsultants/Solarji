@@ -133,6 +133,7 @@ export default function Sidebar({ module, onNavigate, onCloseMobile }) {
             <div style={{ height:12 }} />
             <SectionLabel t="Admin" />
             {CRM_ADMIN.map(l => <SLink key={l.to} {...l} onNavigate={onNavigate} />)}
+            <SLink to="/admin/quotations" label="Admin Quotations" icon={FileText} onNavigate={onNavigate} />
             <SLink to="/admin" label="Admin Panel" icon={Settings} onNavigate={onNavigate} />
           </>
         )}

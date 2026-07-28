@@ -23,6 +23,7 @@ const VoucherForm = lazy(() => import('./pages/stock/VoucherForm'))
 const VoucherList = lazy(() => import('./pages/stock/VoucherList'))
 const VoucherPreview = lazy(() => import('./pages/stock/VoucherPreview'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminQuotations = lazy(() => import('./pages/admin/AdminQuotations'))
 const Attendance = lazy(() => import('./pages/crm/Attendance'))
 
 function PageLoader() {
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="/stock/vouchers" element={<LazyPage stockOnly><VoucherList /></LazyPage>} />
         <Route path="/stock/vouchers/:id/preview" element={<LazyPage stockOnly><VoucherPreview /></LazyPage>} />
         <Route path="/admin" element={<LazyPage adminOnly><AdminDashboard /></LazyPage>} />
+        <Route path="/admin/quotations" element={<LazyPage adminOnly><AdminQuotations /></LazyPage>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

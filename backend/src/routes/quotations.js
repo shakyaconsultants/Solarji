@@ -1,9 +1,46 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const QuotationTemplate = require('../models/QuotationTemplate');
+const Quotation = require('../models/Quotation');
 const { protect, adminOnly } = require('../middleware/auth');
 
 const { sendError } = require('../utils/sendError');
+
+// --- Quotations History ---
+
+router.get('/', protect, async (req, res) => {
+  try {
+    const quotations = await Quotation.find()
+      .populate('createdBy', 'name')
+      .sort({ createdAt: -1 });
+    res.json(quotations);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+router.post('/', protect, async (req, res) => {
+  try {
+    const quotation = await Quotation.create({
+      ...req.body,
+      createdBy: req.user._id
+    });
+    res.status(201).json(quotation);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+router.delete('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    await Quotation.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Quotation deleted successfully' });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// --- Templates ---
 
 router.get('/templates', protect, async (req, res) => {
   try {
