@@ -143,28 +143,25 @@ export default function QuotationGenerator() {
   }, []);
 
   /* find stock items dynamically */
-  const panelItem = stockItems.find(i => i.category === 'Solar Panel');
-  const inverterItem = stockItems.find(i => i.category === 'Inverter');
-  const structureItem = stockItems.find(i => i.category === 'Structure');
-  const batteryItem = stockItems.find(i => i.category === 'Battery' || i.name.toLowerCase().includes('battery'));
+  const panelItem = stockItems.find(i => i.category === 'Solar Panel' && i.sellPrice > 0);
+  const inverterItem = stockItems.find(i => i.category === 'Inverter' && i.sellPrice > 0);
+  const structureItem = stockItems.find(i => i.category === 'Structure' && i.sellPrice > 0);
+  const batteryItem = stockItems.find(i => (i.category === 'Battery' || i.name.toLowerCase().includes('battery')) && i.sellPrice > 0);
 
-  const panelPrice = panelItem?.sellPrice ?? 17000;
-  const inverterPrice = inverterItem?.sellPrice ?? 35000;
-  const structurePrice = structureItem?.sellPrice ?? 5000;
-  const batteryPrice = batteryItem?.sellPrice ?? 50000;
+  const panelPrice = panelItem?.sellPrice || 17000;
+  const inverterPrice = inverterItem?.sellPrice || 35000;
+  const structurePrice = structureItem?.sellPrice || 5000;
+  const batteryPrice = batteryItem?.sellPrice || 50000;
 
   const wp = cType === 'commercial' ? 600 : 550;
   const panelCount = Math.ceil((kw * 1000) / wp);
   
-  const panelCost = panelCount * panelPrice;
-  const inverterCost = (kw / 5) * inverterPrice;
-  const structureCost = kw * structurePrice;
-  const bosCost = kw * (cType === 'commercial' ? 5000 : 14000);
   const batteryCost = sType !== 'onGrid' ? bats * batteryPrice : 0;
 
   /* derived */
-  const total   = panelCost + inverterCost + structureCost + bosCost + batteryCost;
-  const rate    = total / kw;
+  const systemCost = cType ? (kw * RATE[cType]) : 0;
+  const total   = systemCost + batteryCost;
+  const rate    = cType ? RATE[cType] : 60000;
   const subsidy = getSubsidy(kw, cType, sType);
   const net     = total - subsidy;
   const sLabel    = SYS_LABEL[sType];
@@ -440,7 +437,7 @@ export default function QuotationGenerator() {
                 <Lbl>
                   Number of Batteries{' '}
                   <span style={{ color:'#9ca3af', fontWeight:400, textTransform:'none', fontSize:'.72rem' }}>
-                    (₹50,000 per battery, GST inclusive)
+                    (₹{batteryPrice.toLocaleString('en-IN')} per battery, GST inclusive)
                   </span>
                 </Lbl>
                 <div style={{ display:'flex', alignItems:'center', gap:12 }}>
@@ -457,7 +454,7 @@ export default function QuotationGenerator() {
                              color:WHITE, fontWeight:900, fontSize:'1.2rem', cursor:'pointer' }}>
                     +
                   </button>
-                  <span style={{ fontSize:'.85rem', color:'#6b7280' }}>= {fmt(bats * BAT_COST)}</span>
+                  <span style={{ fontSize:'.85rem', color:'#6b7280' }}>= {fmt(bats * batteryPrice)}</span>
                 </div>
               </div>
             )}
@@ -480,9 +477,9 @@ export default function QuotationGenerator() {
                   {sType !== 'onGrid' && (
                     <div>
                       <p style={{ fontSize:'.72rem', color:'rgba(255,255,255,.35)', marginBottom:3 }}>
-                        Batteries ({bats} × ₹50K)
+                        Batteries ({bats} × ₹{Math.round(batteryPrice / 1000)}K)
                       </p>
-                      <p style={{ fontSize:'1.2rem', fontWeight:900, color:WHITE }}>{fmt(bats * BAT_COST)}</p>
+                      <p style={{ fontSize:'1.2rem', fontWeight:900, color:WHITE }}>{fmt(bats * batteryPrice)}</p>
                     </div>
                   )}
                   <div>
@@ -583,10 +580,10 @@ export default function QuotationGenerator() {
               </div>
 
               <p style={{ fontSize:'.8rem', color:'#9ca3af' }}>
-                Shop No. 5, Solar Market, Naubasta Hamirpur Road, Kanpur Nagar — 208021
+                12 A Rajendra Nagar Naubasta Kanpur 208021
               </p>
               <p style={{ fontSize:'.8rem', color:'#9ca3af', marginBottom:'2rem' }}>
-                +91 98765 43210 · +91 87654 32109 · info@solarji.com
+                +91 72330 50533 · info@solarji.com
               </p>
 
               <div style={{ background:ORANGE, color:WHITE, borderRadius:16,
@@ -680,7 +677,7 @@ export default function QuotationGenerator() {
                         {sType !== 'onGrid' && (
                           <p style={{ fontSize:'.75rem', color:'#9ca3af', marginTop:3 }}>
                             Includes {bats} Tubular {bats === 1 ? 'Battery' : 'Batteries'}{' '}
-                            @ ₹50,000 each (GST Incl.)
+                            @ {fmt(batteryPrice)} each (GST Incl.)
                           </p>
                         )}
                       </td>
@@ -954,7 +951,7 @@ export default function QuotationGenerator() {
                   Thanks &amp; Regards — SolarJi
                 </p>
                 <p style={{ fontSize:'.75rem', color:'#9ca3af' }}>
-                  +91 98765 43210 · info@solarji.com · Kanpur, Uttar Pradesh &nbsp;|&nbsp; देश चलेगा सूरज से ☀️
+                  +91 72330 50533 · info@solarji.com · Kanpur, Uttar Pradesh &nbsp;|&nbsp; देश चलेगा सूरज से ☀️
                 </p>
               </div>
             </div>

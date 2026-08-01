@@ -4,9 +4,9 @@ export const BILL_PAD_ROWS = 40;
 export const COMPANY = {
   name: 'SolarJi',
   tagline: 'Solar Installation & Energy Solutions',
-  addressLines: ['Shop No. 5, Solar Market', 'Kanpur, Uttar Pradesh'],
-  address: 'Shop No. 5, Solar Market, Kanpur, Uttar Pradesh',
-  phones: ['+91 98765 43210', '+91 87654 32109'],
+  addressLines: ['12 A Rajendra Nagar Naubasta', 'Kanpur 208021'],
+  address: '12 A Rajendra Nagar Naubasta Kanpur 208021',
+  phones: ['+91 7233050533'],
   email: 'info@solarji.com',
 };
 

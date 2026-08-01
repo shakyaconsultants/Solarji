@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Trash2, Printer, ChevronLeft, RefreshCw, Sparkles, PlusCircle, Save, History } from 'lucide-react';
+import { FileText, Plus, Trash2, Printer, ChevronLeft, RefreshCw, Sparkles, PlusCircle, Save, History, Search, X } from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
 import toast from 'react-hot-toast';
@@ -10,36 +10,7 @@ import logo from '../../assets/solarji logo.jpeg';
 const ACCENT_COLOR = '#f7941d'; // Brand orange color
 const DARK_GRAY = '#1E1E1E';
 
-// Default templates for the three categories
-const DEFAULT_COMPONENTS = {
-  rooftop: [
-    { name: '550 Watt Mono Perc Solar Panel', hsn: '85414300', qty: 10, unit: 'Nos', price: 12000, gst: 5 },
-    { name: '5kW On-Grid Solar Inverter', hsn: '85044090', qty: 1, unit: 'Nos', price: 35000, gst: 12 },
-    { name: 'GI Solar Mounting Structure', hsn: '73089090', qty: 1, unit: 'Set', price: 15000, gst: 18 },
-    { name: 'Earthing Kit with Copper Rod & LA', hsn: '85359030', qty: 1, unit: 'Set', price: 8000, gst: 18 },
-    { name: 'DC & AC Cabling with Accessories', hsn: '85444920', qty: 1, unit: 'Set', price: 12000, gst: 18 },
-    { name: 'Installation & Net Metering charges', hsn: '9987', qty: 1, unit: 'Job', price: 20000, gst: 18 }
-  ],
-  pump: [
-    { name: '5HP Submersible Solar Pump (Crompton)', hsn: '84137010', qty: 1, unit: 'Nos', price: 48000, gst: 18 },
-    { name: '5HP AC Solar Pump Controller / Drive', hsn: '85044010', qty: 1, unit: 'Nos', price: 22000, gst: 5 },
-    { name: 'Solar Panel 335W Poly', hsn: '85414300', qty: 15, unit: 'Nos', price: 6500, gst: 5 },
-    { name: 'GI Pump Structure', hsn: '73089090', qty: 1, unit: 'Set', price: 12000, gst: 18 },
-    { name: 'Cables, HDPE Pipes & Accessories', hsn: '85444920', qty: 1, unit: 'Set', price: 10000, gst: 18 },
-    { name: 'Installation, Earthing & Boring charges', hsn: '9987', qty: 1, unit: 'Job', price: 15000, gst: 18 }
-  ],
-  chakki: [
-    { name: '625 Watt Topcon Solar Panel', hsn: '', qty: 42, unit: 'Nos', price: 10312.5, gst: 5 },
-    { name: 'AC Solar Drive 30HP (Invt/Crompton)', hsn: '85044010', qty: 1, unit: 'Nos', price: 52380.35, gst: 5 },
-    { name: '6 Bolt Oil Expeller (Sarswati gaziabad)', hsn: '8479', qty: 1, unit: 'Nos', price: 194915.25, gst: 18 },
-    { name: 'Aata Chakki 18 inch', hsn: '', qty: 1, unit: 'Pcs', price: 63559.32, gst: 18 },
-    { name: '7.5HP Motor 960 rpm (Crompton)', hsn: '85015210', qty: 2, unit: 'Nos', price: 46610.17, gst: 18 },
-    { name: '02HP Motor 1440 rpm (Crompton)', hsn: '', qty: 1, unit: 'Nos', price: 25423.73, gst: 18 },
-    { name: '14 Inch Masala Chakki', hsn: '', qty: 1, unit: 'Nos', price: 25423.73, gst: 18 },
-    { name: 'Installation (GI Structure, DC Wire, DCDB, Clamps, Earthing & Accessories)', hsn: '', qty: 1, unit: 'Nos', price: 257830, gst: 18 },
-    { name: 'Transportation', hsn: '', qty: 1, unit: 'Nos', price: 8474.58, gst: 18 }
-  ]
-};
+
 
 // Helper for Indian Rupees format
 function fmt(n) {
@@ -91,6 +62,11 @@ export default function AdminQuotations() {
   const [viewMode, setViewMode] = useState('builder'); // 'builder' or 'history'
   const [history, setHistory] = useState([]);
 
+  // Inventory items for product picker
+  const [stockItems, setStockItems] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+
   // Fetch quotations history
   const fetchHistory = () => {
     api.get('/quotations')
@@ -104,6 +80,16 @@ export default function AdminQuotations() {
 
   useEffect(() => {
     fetchHistory();
+  }, []);
+
+  useEffect(() => {
+    api.get('/stock/items', { params: { picker: 1, limit: 100 } })
+      .then(res => {
+        setStockItems(res.data.items || []);
+      })
+      .catch(err => {
+        console.error('Failed to load stock items:', err);
+      });
   }, []);
 
   const handleSaveQuotation = async () => {
@@ -207,7 +193,6 @@ export default function AdminQuotations() {
   // Handle category change
   const handleCategoryChange = (cat) => {
     setCategory(cat);
-    setItems(DEFAULT_COMPONENTS[cat].map(item => ({ ...item })));
   };
 
   // Handle cell edit
@@ -226,6 +211,20 @@ export default function AdminQuotations() {
     setItems([...items, { name: '', hsn: '', qty: 1, unit: 'Nos', price: 0, gst: 18 }]);
   };
 
+  // Add item from inventory
+  const addInventoryItem = (item) => {
+    const newItem = {
+      name: item.name,
+      hsn: '',
+      qty: 1,
+      unit: item.unit || 'Nos',
+      price: item.sellPrice || 0,
+      gst: 18
+    };
+    setItems([...items, newItem]);
+    toast.success(`Added "${item.name}" from inventory`);
+  };
+
   // Add stock item function removed
 
   // Remove row
@@ -233,12 +232,7 @@ export default function AdminQuotations() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  // Reset items to category defaults
-  const resetToDefaults = () => {
-    if (window.confirm('Reset this list to default components? All edits will be lost.')) {
-      setItems(DEFAULT_COMPONENTS[category].map(item => ({ ...item })));
-    }
-  };
+
 
   // Calculations
   const calculateTotals = () => {
@@ -592,9 +586,73 @@ export default function AdminQuotations() {
 
         {/* ── Editable Item Table (No Print) ── */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm mb-8 overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h3 className="font-bold text-gray-800 text-base">Quotation Components List</h3>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search Inventory Dropdown */}
+              <div className="relative">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs">
+                  <Search size={14} className="text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search inventory..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                    className="border-none outline-none text-xs bg-transparent w-36 focus:ring-0 focus:outline-none"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="text-gray-400 hover:text-gray-600 border-none bg-transparent cursor-pointer p-0"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {showDropdown && (
+                  <div className="absolute right-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                    {stockItems
+                      .filter(item => 
+                        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map(item => (
+                        <button
+                          key={item._id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevents input blur before click registers
+                            addInventoryItem(item);
+                            setSearchQuery('');
+                            setShowDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-orange-50/50 flex flex-col gap-0.5 border-b border-gray-100 last:border-0 transition"
+                          style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer' }}
+                        >
+                          <span className="font-bold text-xs text-gray-800">{item.name}</span>
+                          <span className="text-[10px] text-gray-500 flex justify-between w-full">
+                            <span>Price: ₹{item.sellPrice?.toLocaleString('en-IN')}</span>
+                            <span>Stock: {item.quantity} {item.unit}</span>
+                          </span>
+                        </button>
+                      ))}
+                    {stockItems.filter(item => 
+                      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).length === 0 && (
+                      <div className="p-3 text-center text-xs text-gray-400 italic">
+                        No matching items in inventory
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
@@ -607,14 +665,7 @@ export default function AdminQuotations() {
               >
                 <Trash2 size={12} /> Clear All
               </button>
-              <button
-                type="button"
-                onClick={resetToDefaults}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
-                style={{ cursor: 'pointer', background: 'transparent' }}
-              >
-                <RefreshCw size={12} /> Load Defaults ({category === 'rooftop' ? 'Solar' : category === 'pump' ? 'Pump' : 'Chakki'})
-              </button>
+
               <button
                 type="button"
                 onClick={addRow}
@@ -872,11 +923,11 @@ export default function AdminQuotations() {
             {/* Top red header banner */}
             <div className="print-header-bg text-white px-4 py-2 flex items-center justify-between" style={{ backgroundColor: ACCENT_COLOR, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                <span>📞 {customerPhone || '9451908101'}</span>
+                <span>📞 {customerPhone || '7233050533'}</span>
                 <span>✉️ risingsolarenergyup@gmail.com</span>
               </div>
               <div style={{ fontSize: '10px', fontWeight: 'bold', textAlign: 'right', lineHeight: '1.3', maxWidth: '60%' }}>
-                OFFICE ADD: 33 - W Block Keshav Nagar,<br />Hamirpur Road Kanpur - 14 (Near Madhulok Chauraha)
+                OFFICE ADD: 12 A Rajendra Nagar Naubasta Kanpur 208021
               </div>
             </div>
 
