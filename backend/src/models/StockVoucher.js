@@ -1,7 +1,7 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const voucherItemSchema = new mongoose.Schema({
-  item: { type: mongoose.Schema.Types.ObjectId, ref: 'StockItem', required: true },
+  item: { type: mongoose.Schema.Types.ObjectId, ref: 'StockItem', required: false },
   itemName: { type: String, required: true },
   unit: { type: String, default: 'piece' },
   quantity: { type: Number, required: true, min: 1 },
@@ -11,7 +11,7 @@ const voucherItemSchema = new mongoose.Schema({
 
 const stockVoucherSchema = new mongoose.Schema({
   voucherNumber: { type: String, unique: true },
-  type: { type: String, enum: ['ADD', 'SELL'], required: true },
+  type: { type: String, enum: ['ADD', 'SELL', 'EXPENSE'], required: true },
   date: { type: Date, default: Date.now },        // user-selectable transaction date
   items: [voucherItemSchema],
   totalAmount: { type: Number, required: true },
@@ -23,7 +23,7 @@ const stockVoucherSchema = new mongoose.Schema({
 
 stockVoucherSchema.pre('save', async function () {
   if (!this.voucherNumber) {
-    const prefix = this.type === 'ADD' ? 'PV' : 'SV';
+    const prefix = this.type === 'ADD' ? 'PV' : this.type === 'SELL' ? 'SV' : 'EV';
     const latest = await this.constructor
       .findOne({ type: this.type })
       .sort({ createdAt: -1 })

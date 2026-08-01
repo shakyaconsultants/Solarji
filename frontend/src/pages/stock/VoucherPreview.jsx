@@ -21,7 +21,11 @@ export default function VoucherPreview() {
 
   const handlePrint = () => window.print();
 
-  const title = voucher?.type === 'SELL' ? 'Sales Invoice Preview' : 'Purchase Bill Preview';
+  const title = voucher?.type === 'EXPENSE'
+    ? 'Expense Bill Preview'
+    : voucher?.type === 'SELL'
+    ? 'Sales Invoice Preview'
+    : 'Purchase Bill Preview';
 
   return (
     <Layout module="stock">

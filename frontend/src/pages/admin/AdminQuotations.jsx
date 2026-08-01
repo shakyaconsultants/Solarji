@@ -948,6 +948,9 @@ export default function AdminQuotations() {
               
               <div className="text-right">
                 <h1 className="text-xl md:text-2xl font-black italic tracking-wider leading-none text-white/95">Estimate\Performa</h1>
+                <p className="text-[11px] text-yellow-400 font-bold uppercase tracking-wider mt-1.5 font-sans">
+                  Product: {category === 'rooftop' ? 'Rooftop Solar' : category === 'pump' ? 'Water Pump' : category === 'chakki' ? 'Chakki' : category}
+                </p>
                 <p className="text-[10px] text-gray-300 font-semibold mt-1">Estimate No. {estimateNo}</p>
               </div>
             </div>

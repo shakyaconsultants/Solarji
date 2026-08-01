@@ -85,6 +85,7 @@ export default function App() {
         <Route path="/stock/items" element={<LazyPage stockOnly><StockItems /></LazyPage>} />
         <Route path="/stock/voucher/add" element={<LazyPage stockOnly><VoucherForm type="ADD" /></LazyPage>} />
         <Route path="/stock/voucher/sell" element={<LazyPage stockOnly><VoucherForm type="SELL" /></LazyPage>} />
+        <Route path="/stock/voucher/expense" element={<LazyPage stockOnly><VoucherForm type="EXPENSE" /></LazyPage>} />
         <Route path="/stock/vouchers" element={<LazyPage stockOnly><VoucherList /></LazyPage>} />
         <Route path="/stock/vouchers/:id/preview" element={<LazyPage stockOnly><VoucherPreview /></LazyPage>} />
         <Route path="/admin" element={<LazyPage adminOnly><AdminDashboard /></LazyPage>} />

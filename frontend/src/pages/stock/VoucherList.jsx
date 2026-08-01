@@ -96,11 +96,16 @@ export default function VoucherList() {
       <div className="p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Voucher History</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 font-mono">
             {isAdmin && (
-              <button onClick={() => navigate('/stock/voucher/add')} className="btn-success gap-2">
-                <Package className="w-4 h-4" /> Purchase
-              </button>
+              <>
+                <button onClick={() => navigate('/stock/voucher/add')} className="btn-success gap-2">
+                  <Package className="w-4 h-4" /> Purchase
+                </button>
+                <button onClick={() => navigate('/stock/voucher/expense')} className="btn-danger gap-2">
+                  <span className="w-4 h-4 flex items-center justify-center font-bold text-xs">−</span> Expense
+                </button>
+              </>
             )}
             <button onClick={() => navigate('/stock/voucher/sell')} className="btn-primary gap-2">
               <ShoppingCart className="w-4 h-4" /> Sell
@@ -108,28 +113,34 @@ export default function VoucherList() {
           </div>
         </div>
 
-        <div className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-4 mb-6 max-[480px]:grid-cols-1`}>
+        <div className={`grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-1'} gap-4 mb-6 max-[480px]:grid-cols-1`}>
           {isAdmin && (
             <div className="card border-l-4 border-green-500">
-              <p className="text-sm text-gray-500">Total Purchases</p>
-              <p className="text-2xl font-bold text-green-600">₹{summary.purchase.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+              <p className="text-sm text-gray-500 font-bold uppercase tracking-wide">Total Purchases</p>
+              <p className="text-2xl font-black text-green-600 mt-1">₹{summary.purchase.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
             </div>
           )}
           <div className="card border-l-4 border-solar-500">
-            <p className="text-sm text-gray-500">Total Sales</p>
-            <p className="text-2xl font-bold text-solar-600">₹{summary.sales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+            <p className="text-sm text-gray-500 font-bold uppercase tracking-wide">Total Sales</p>
+            <p className="text-2xl font-black text-solar-600 mt-1">₹{summary.sales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
           </div>
+          {isAdmin && (
+            <div className="card border-l-4 border-red-500">
+              <p className="text-sm text-gray-500 font-bold uppercase tracking-wide">Total Expenses</p>
+              <p className="text-2xl font-black text-red-600 mt-1">₹{(summary.expense || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+            </div>
+          )}
         </div>
 
         {isAdmin && (
           <div className="card mb-4 flex gap-3">
-            {['', 'ADD', 'SELL'].map(t => (
+            {['', 'ADD', 'SELL', 'EXPENSE'].map(t => (
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
-                className={`btn ${typeFilter === t ? 'btn-primary' : 'btn-secondary'} text-xs`}
+                className={`btn ${typeFilter === t ? 'btn-primary' : 'btn-secondary'} text-xs font-semibold`}
               >
-                {t === '' ? 'All' : t === 'ADD' ? 'Purchases' : 'Sales'}
+                {t === '' ? 'All' : t === 'ADD' ? 'Purchases' : t === 'SELL' ? 'Sales' : 'Expenses'}
               </button>
             ))}
           </div>
@@ -157,8 +168,12 @@ export default function VoucherList() {
                       <tr key={v._id} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="py-3 px-3 font-mono text-sm font-medium text-gray-800">{v.voucherNumber}</td>
                         <td className="py-3 px-3">
-                          <span className={`badge ${v.type === 'ADD' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {v.type === 'ADD' ? 'Purchase' : 'Sale'}
+                          <span className={`badge ${
+                            v.type === 'ADD' ? 'bg-green-100 text-green-700' :
+                            v.type === 'SELL' ? 'bg-red-100 text-red-700' :
+                            'bg-purple-100 text-purple-700'
+                          }`}>
+                            {v.type === 'ADD' ? 'Purchase' : v.type === 'SELL' ? 'Sale' : 'Expense'}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-gray-600">{v.party || '—'}</td>
@@ -236,8 +251,12 @@ export default function VoucherList() {
                     {selected.voucherNumber || 'Voucher'}
                   </h3>
                   {!selected._loading && selected.type && (
-                    <span className={`badge mt-1 ${selected.type === 'ADD' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {selected.type === 'ADD' ? 'Purchase Bill' : 'Sales Invoice'}
+                    <span className={`badge mt-1 ${
+                      selected.type === 'ADD' ? 'bg-green-100 text-green-700' :
+                      selected.type === 'SELL' ? 'bg-red-100 text-red-700' :
+                      'bg-purple-100 text-purple-700'
+                    }`}>
+                      {selected.type === 'ADD' ? 'Purchase Bill' : selected.type === 'SELL' ? 'Sales Invoice' : 'Expense Bill'}
                     </span>
                   )}
                 </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Trash2, X, FileSpreadsheet, Eye, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import VoucherBillDocument from './VoucherBillDocument';
@@ -70,6 +71,24 @@ export default function VoucherBillSheetModal({
   const [sheetRows, setSheetRows] = useState(() => createBillPadRows());
   const [localParty, setLocalParty] = useState(party);
   const [localAddress, setLocalAddress] = useState(partyAddress);
+  const [openDropdownIdx, setOpenDropdownIdx] = useState(null);
+  const [itemSearchText, setItemSearchText] = useState('');
+  const [dropdownCoords, setDropdownCoords] = useState(null);
+
+  useEffect(() => {
+    const handleScrollOrResize = () => {
+      setOpenDropdownIdx(null);
+      setDropdownCoords(null);
+    };
+    if (openDropdownIdx !== null) {
+      window.addEventListener('scroll', handleScrollOrResize, { capture: true, passive: true });
+      window.addEventListener('resize', handleScrollOrResize);
+    }
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, { capture: true });
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [openDropdownIdx]);
 
   useEffect(() => {
     if (!open) return;
@@ -262,16 +281,104 @@ export default function VoucherBillSheetModal({
                         <tr key={idx} className="border-b border-gray-200">
                           <td className="py-1 px-2 text-center text-gray-500 font-mono border-r border-gray-100">{idx + 1}</td>
                           <td className="py-1 px-1 border-r border-gray-100">
-                            <select
-                              className="input py-1.5 text-xs w-full min-w-[180px]"
-                              value={row.item}
-                              onChange={(e) => handleItemChange(idx, e.target.value)}
-                            >
-                              <option value="">Select item...</option>
-                              {stockItems.map((i) => (
-                                <option key={i._id} value={i._id}>{i.name}</option>
-                              ))}
-                            </select>
+                            <div style={{ position: 'relative' }}>
+                              <button
+                                type="button"
+                                className="input text-left flex justify-between items-center w-full py-1 px-2.5 text-xs font-semibold"
+                                style={{ background: '#fff', cursor: 'pointer', minWidth: '180px' }}
+                                onClick={(e) => {
+                                  if (openDropdownIdx === idx) {
+                                    setOpenDropdownIdx(null);
+                                    setDropdownCoords(null);
+                                    setItemSearchText('');
+                                  } else {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setDropdownCoords({
+                                      top: rect.bottom + window.scrollY,
+                                      left: rect.left + window.scrollX,
+                                      width: rect.width
+                                    });
+                                    setOpenDropdownIdx(idx);
+                                    setItemSearchText('');
+                                  }
+                                }}
+                              >
+                                <span className="truncate">
+                                  {row.itemName ? row.itemName : 'Select item...'}
+                                </span>
+                                <span className="text-gray-400 text-[10px] ml-1 font-mono">▼</span>
+                              </button>
+
+                              {/* Dropdown Overlay via Portal */}
+                              {openDropdownIdx === idx && dropdownCoords && createPortal(
+                                <>
+                                  <div
+                                    style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+                                    onClick={() => {
+                                      setOpenDropdownIdx(null);
+                                      setDropdownCoords(null);
+                                      setItemSearchText('');
+                                    }}
+                                  />
+                                  
+                                  <div
+                                    className="card shadow-xl"
+                                    style={{
+                                      position: 'absolute',
+                                      top: `${dropdownCoords.top}px`,
+                                      left: `${dropdownCoords.left}px`,
+                                      width: `${dropdownCoords.width}px`,
+                                      zIndex: 200,
+                                      maxHeight: '220px',
+                                      overflowY: 'auto',
+                                      marginTop: '4px',
+                                      padding: '6px',
+                                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                                      border: '1px solid #e5e7eb',
+                                      background: '#fff',
+                                    }}
+                                  >
+                                    <input
+                                      type="text"
+                                      className="input text-[11px] mb-2 py-1 px-2.5 w-full"
+                                      placeholder="Search..."
+                                      value={itemSearchText}
+                                      onChange={(e) => setItemSearchText(e.target.value)}
+                                      autoFocus
+                                    />
+                                    <div style={{ display: 'grid', gap: '2px' }}>
+                                      {stockItems
+                                        .filter((i) =>
+                                          i.name.toLowerCase().includes(itemSearchText.toLowerCase())
+                                        )
+                                        .map((i) => (
+                                          <button
+                                            key={i._id}
+                                            type="button"
+                                            className="text-left w-full px-2 py-1.5 text-[11px] font-semibold rounded-md hover:bg-gray-100 text-gray-800 transition-colors"
+                                            onClick={() => {
+                                              handleItemChange(idx, i._id);
+                                              setOpenDropdownIdx(null);
+                                              setDropdownCoords(null);
+                                              setItemSearchText('');
+                                            }}
+                                          >
+                                            {i.name}
+                                          </button>
+                                        ))}
+                                      {stockItems.filter((i) =>
+                                        i.name.toLowerCase().includes(itemSearchText.toLowerCase())
+                                      ).length === 0 && (
+                                        <div className="text-center text-[10px] text-gray-400 py-2 font-semibold">
+                                          No match
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </>,
+                                document.body
+                              )}
+                            </div>
                           </td>
                           <td className="py-1 px-1 border-r border-gray-100">
                             <input

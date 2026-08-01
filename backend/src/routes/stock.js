@@ -216,10 +216,11 @@ router.get('/vouchers', stockAccess, async (req, res) => {
       ]),
     ]);
 
-    const summary = { purchase: 0, sales: 0 };
+    const summary = { purchase: 0, sales: 0, expense: 0 };
     summaryAgg.forEach((row) => {
       if (row._id === 'ADD') summary.purchase = row.total;
       if (row._id === 'SELL') summary.sales = row.total;
+      if (row._id === 'EXPENSE') summary.expense = row.total;
     });
 
     res.json({ vouchers, pagination: paginationMeta(page, limit, total), summary });
@@ -235,8 +236,8 @@ router.get('/vouchers/:id', stockAccess, async (req, res) => {
       .populate('items.item');
     if (!voucher) return res.status(404).json({ message: 'Voucher not found' });
 
-    if (voucher.type === 'ADD' && !isAdmin(req.user)) {
-      return res.status(403).json({ message: 'Only admins can access Purchase Vouchers' });
+    if ((voucher.type === 'ADD' || voucher.type === 'EXPENSE') && !isAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only admins can access Purchase/Expense Vouchers' });
     }
 
     res.json(voucher);
@@ -250,8 +251,8 @@ router.delete('/vouchers/:id', stockTransact, async (req, res) => {
     const voucher = await StockVoucher.findById(req.params.id).populate('items.item');
     if (!voucher) return res.status(404).json({ message: 'Voucher not found' });
 
-    if (voucher.type === 'ADD' && !isAdmin(req.user)) {
-      return res.status(403).json({ message: 'Only admins can delete Purchase Vouchers' });
+    if ((voucher.type === 'ADD' || voucher.type === 'EXPENSE') && !isAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only admins can delete Purchase/Expense Vouchers' });
     }
 
     const reverseType = voucher.type === 'ADD' ? 'SELL' : 'ADD';
@@ -278,11 +279,47 @@ router.delete('/vouchers/:id', stockTransact, async (req, res) => {
 router.post('/vouchers', stockTransact, async (req, res) => {
   try {
     const { type, items, party, partyAddress, note, date } = req.body;
-    if (type === 'ADD' && !isAdmin(req.user)) {
-      return res.status(403).json({ message: 'Only admins can create Purchase Vouchers' });
+    if ((type === 'ADD' || type === 'EXPENSE') && !isAdmin(req.user)) {
+      return res.status(403).json({ message: 'Only admins can create Purchase/Expense Vouchers' });
     }
     if (!items?.length) {
       return res.status(400).json({ message: 'At least one item is required' });
+    }
+
+    if (type === 'EXPENSE') {
+      let totalAmount = 0;
+      const processedItems = [];
+
+      for (const row of items) {
+        const qty = Number(row.quantity) || 1;
+        const price = Number(row.price) || 0;
+        const total = qty * price;
+        totalAmount += total;
+
+        processedItems.push({
+          itemName: row.itemName,
+          unit: row.unit || 'piece',
+          quantity: qty,
+          price,
+          total,
+        });
+      }
+
+      const voucher = await StockVoucher.create({
+        type,
+        items: processedItems,
+        totalAmount,
+        party,
+        partyAddress,
+        note,
+        date: date ? new Date(date) : new Date(),
+        createdBy: req.user._id,
+      });
+
+      await voucher.populate('createdBy', 'name');
+      dashCache.invalidateStock();
+      dashCache.invalidateAdmin();
+      return res.status(201).json(voucher);
     }
 
     const itemMap = await loadStockItemMap(items.map((row) => row.item));

@@ -175,9 +175,10 @@ export default function VoucherBillDocument({ voucher, className = '', styled = 
   if (!voucher) return null;
 
   const isSell = voucher.type === 'SELL';
-  const billTitle = isSell ? 'Sales Invoice' : 'Purchase Bill';
-  const partyLabel = isSell ? 'Customer Name' : 'Supplier Name';
-  const addressLabel = isSell ? 'Customer Address' : 'Supplier Address';
+  const isExpense = voucher.type === 'EXPENSE';
+  const billTitle = isExpense ? 'Expense Bill' : isSell ? 'Sales Invoice' : 'Purchase Bill';
+  const partyLabel = isExpense ? 'Paid To' : isSell ? 'Customer Name' : 'Supplier Name';
+  const addressLabel = isExpense ? 'Recipient Address' : isSell ? 'Customer Address' : 'Supplier Address';
   const lines = buildBillLines(voucher.items);
   const billNo = isDraft ? 'PREVIEW' : voucher.voucherNumber;
 

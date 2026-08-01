@@ -62,29 +62,30 @@ function getBOM(kw, type, sysType, batteries, panelItemName, inverterItemName, b
   const cnt      = Math.ceil((kw * 1000) / wp);
   const panBrand = panelItemName || (type === 'commercial' ? 'Adani / Waaree N-Type TopCon' : 'Loom / Adani Mono PERC');
   const invBrand = inverterItemName || (sysType === 'onGrid' ? 'Solis / Delta / Growatt' : 'Luminous / Microtek');
-  const invType  = sysType === 'onGrid'  ? 'On-Grid String Inverter'       : 'Hybrid Inverter';
+  const invType  = sysType === 'onGrid'  ? 'Grid Tied Inverter'       : 'Hybrid Inverter';
 
   const rows = [
-    [`${panBrand} Solar Module (Non-DCR)`,             `${wp} Wp`,                 `${cnt} Nos`      ],
+    [`${panBrand} Solar Module (DCR)`,                  `${wp} Wp`,                 `${cnt} Nos`      ],
     [`${invBrand} ${invType}`,                          `${kw} kW`,                 '1 No'            ],
-    ['Apollo GI / Aluminium Mounting Structure (C-Channel)', '140×50 mm',           'As per Need'     ],
+    ['Apollo GI / Tata - Bluescope (zincalume) Mounting Structure (C-Channel)', '140×50 mm', 'As per Need'],
     ['Apollo Base Plate',                               '140×140 mm',               'As per Need'     ],
-    ['WAACAB / Polycab DC Solar Cable',                 '4 mm²',                    'As per Need'     ],
-    ['Havells / Polycab AC Cable',                      '6 mm²',                    'As per Need'     ],
-    ['Havells DCDB Protection Box',                     `${Math.ceil(cnt/10)} String`, '1 No'         ],
-    ['Havells ACDB Protection Box (1-Phase)',            '1 In 1 Out',               '1 No'            ],
+    ['Mitcab / Havells / Standard Solar DC Cable',      '4 mm²',                    'As per Need'     ],
+    ['Havells Green Earthing wire',                     '4 mm²',                    'As per Need'     ],
+    ['Havells DCDB Protection Box',                     'Standard',                 '1 No'            ],
+    ['Havells ACDB Protection Box (1-Phase)',            'Standard',                 '1 No'            ],
     ['GI Earthing with Copper Bonded Earth Rod',        '2 Mtr',                    '2 Sets'          ],
     ['Lightning Arrestor (LA-CB-Heavy) with GI Pole',  'Heavy Duty',               '1 No'            ],
+    ['Earthing Chemical Bag',                           'Standard',                 '2 Nos'           ],
     ['MC4 Connectors',                                  'Pair',                     'As per Need'     ],
-    ['SS Z-Clamp, Mid-Clamp, Nut-Bolts & Fasteners',   '—',                        'As per Need'     ],
-    ['PVC Conduit Pipe & Saddle',                       '25 mm',                    'As per Need'     ],
+    ['SS Z-Clamp, Mid-Clamp, Nut-Bolts & Fasteners',   'Standard',                 'As per Need'     ],
+    ['PVC Conduit Pipe',                                '25 mm',                    'As per Need'     ],
     ['UV Cable Tie',                                    '300 mm',                   'As per Need'     ],
     ['Flexible Rigid Armoured Pipe',                    '17 mm',                    'As per Need'     ],
     ['AKG / CAP PVC Pipe',                              '25 mm',                    'As per Need'     ],
-    ['Copper Pin Type & Ring Type Lugs',                '—',                        'As per Need'     ],
-    ['SS Washer, SS Nut-Bolt (Small & Large)',          '—',                        'As per Need'     ],
-    ['Havells Lifeline / Polycab Green Wire',           '4 sq mm',                  'As per Need'     ],
-    ['PVC Saddle & Cable Markers',                      '—',                        'As per Need'     ],
+    ['Copper Pin Type & Ring Type Lugs',                'Standard',                 'As per Need'     ],
+    ['SS Washer, SS Nut-Bolt (Small & Large)',          'Standard',                 'As per Need'     ],
+    ['Armod Power Cable',                            '10 mm²',                   'As per Need'     ],
+    ['PVC Saddle & Cable Markers',                      'Standard',                 'As per Need'     ],
   ];
 
   if (sysType !== 'onGrid' && batteries > 0)
@@ -132,6 +133,11 @@ export default function QuotationGenerator() {
   const [submitting, setSubmitting] = useState(false);
   const [stockItems, setStockItems] = useState([]);
 
+  /* Selected equipment states */
+  const [selPanelId, setSelPanelId] = useState('');
+  const [selInverterId, setSelInverterId] = useState('');
+  const [selBatteryId, setSelBatteryId] = useState('');
+
   useEffect(() => {
     api.get('/stock/public/items')
       .then((res) => {
@@ -142,16 +148,33 @@ export default function QuotationGenerator() {
       });
   }, []);
 
-  /* find stock items dynamically */
-  const panelItem = stockItems.find(i => i.category === 'Solar Panel' && i.sellPrice > 0);
-  const inverterItem = stockItems.find(i => i.category === 'Inverter' && i.sellPrice > 0);
-  const structureItem = stockItems.find(i => i.category === 'Structure' && i.sellPrice > 0);
-  const batteryItem = stockItems.find(i => (i.category === 'Battery' || i.name.toLowerCase().includes('battery')) && i.sellPrice > 0);
+  useEffect(() => {
+    if (stockItems.length > 0) {
+      const firstPanel = stockItems.find(i => i.category === 'Solar Panel' && i.sellPrice > 0);
+      if (firstPanel && !selPanelId) setSelPanelId(firstPanel._id);
+      
+      const firstInverter = stockItems.find(i => i.category === 'Inverter' && i.sellPrice > 0);
+      if (firstInverter && !selInverterId) setSelInverterId(firstInverter._id);
+      
+      const firstBattery = stockItems.find(i => (i.category === 'Battery' || i.name.toLowerCase().includes('battery')) && i.sellPrice > 0);
+      if (firstBattery && !selBatteryId) setSelBatteryId(firstBattery._id);
+    }
+  }, [stockItems]);
 
-  const panelPrice = panelItem?.sellPrice || 17000;
-  const inverterPrice = inverterItem?.sellPrice || 35000;
+  /* find stock items dynamically */
+  const panelsList = stockItems.filter(i => i.category === 'Solar Panel' && i.sellPrice > 0);
+  const invertersList = stockItems.filter(i => i.category === 'Inverter' && i.sellPrice > 0);
+  const batteriesList = stockItems.filter(i => (i.category === 'Battery' || i.name.toLowerCase().includes('battery')) && i.sellPrice > 0);
+
+  const selectedPanel = stockItems.find(i => i._id === selPanelId) || panelsList[0];
+  const selectedInverter = stockItems.find(i => i._id === selInverterId) || invertersList[0];
+  const selectedBattery = stockItems.find(i => i._id === selBatteryId) || batteriesList[0];
+
+  const panelPrice = selectedPanel?.sellPrice || 17000;
+  const inverterPrice = selectedInverter?.sellPrice || 35000;
+  const structureItem = stockItems.find(i => i.category === 'Structure' && i.sellPrice > 0);
   const structurePrice = structureItem?.sellPrice || 5000;
-  const batteryPrice = batteryItem?.sellPrice || 50000;
+  const batteryPrice = selectedBattery?.sellPrice || 50000;
 
   const wp = cType === 'commercial' ? 600 : 550;
   const panelCount = Math.ceil((kw * 1000) / wp);
@@ -159,7 +182,11 @@ export default function QuotationGenerator() {
   const batteryCost = sType !== 'onGrid' ? bats * batteryPrice : 0;
 
   /* derived */
-  const systemCost = cType ? (kw * RATE[cType]) : 0;
+  const panelCost = panelCount * panelPrice;
+  const inverterCost = inverterPrice;
+  const structureCost = structurePrice * kw;
+  const installationAndBOS = 12000 * kw; // Standard installation, wiring, ears, DCDB/ACDB, and labor
+  const systemCost = cType ? (panelCost + inverterCost + structureCost + installationAndBOS) : 0;
   const total   = systemCost + batteryCost;
   const rate    = cType ? RATE[cType] : 60000;
   const subsidy = getSubsidy(kw, cType, sType);
@@ -173,7 +200,7 @@ export default function QuotationGenerator() {
   const centralSub  = subEligible ? getCentralSubsidy(kw) : 0;
   const stateSub    = subEligible ? getStateSubsidy(kw)   : 0;
 
-  const bom       = cType ? getBOM(kw, cType, sType, bats, panelItem?.name, inverterItem?.name, batteryItem?.name) : [];
+  const bom       = cType ? getBOM(kw, cType, sType, bats, selectedPanel?.name, selectedInverter?.name, selectedBattery?.name) : [];
 
   /* Phone number validation: compulsory and must be a valid 10-digit mobile starting with 6-9 */
   const phoneRegex = /^[6-9]\d{9}$/;
@@ -430,6 +457,82 @@ export default function QuotationGenerator() {
               </select>
             </div>
 
+            {/* Equipment Selection */}
+            <div style={{ marginBottom:'1.75rem', padding:'1.25rem', borderRadius:16,
+                          background:'#f9fafb', border:'1px solid #e5e7eb' }}>
+              <p style={{ fontSize:'.75rem', fontWeight:800, color:BLACK, textTransform:'uppercase',
+                          letterSpacing:'.06em', marginBottom:'1rem', borderBottom:'1px solid #e5e7eb', paddingBottom:8 }}>
+                Equipment Selection
+              </p>
+              
+              <div style={{ display:'grid', gap:'1rem' }}>
+                {/* Solar Panel Selection */}
+                <div>
+                  <Lbl>Solar Panel Model *</Lbl>
+                  <select 
+                    className="input"
+                    value={selPanelId}
+                    onChange={e => setSelPanelId(e.target.value)}
+                    style={{ fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    {panelsList.length > 0 ? (
+                      panelsList.map(item => (
+                        <option key={item._id} value={item._id}>
+                          {item.name} — {fmt(item.sellPrice)}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No Panels in stock (using default)</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Inverter Selection */}
+                <div>
+                  <Lbl>Inverter Model *</Lbl>
+                  <select 
+                    className="input"
+                    value={selInverterId}
+                    onChange={e => setSelInverterId(e.target.value)}
+                    style={{ fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    {invertersList.length > 0 ? (
+                      invertersList.map(item => (
+                        <option key={item._id} value={item._id}>
+                          {item.name} — {fmt(item.sellPrice)}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No Inverters in stock (using default)</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Battery Selection (if hybrid/offGrid) */}
+                {sType !== 'onGrid' && (
+                  <div>
+                    <Lbl>Battery Model *</Lbl>
+                    <select 
+                      className="input"
+                      value={selBatteryId}
+                      onChange={e => setSelBatteryId(e.target.value)}
+                      style={{ fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                    >
+                      {batteriesList.length > 0 ? (
+                        batteriesList.map(item => (
+                          <option key={item._id} value={item._id}>
+                            {item.name} — {fmt(item.sellPrice)}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">No Batteries in stock (using default)</option>
+                      )}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Batteries */}
             {sType !== 'onGrid' && (
               <div style={{ marginBottom:'1.75rem', padding:'1.25rem', borderRadius:13,
@@ -470,9 +573,9 @@ export default function QuotationGenerator() {
                               marginBottom: subsidy > 0 ? '1rem' : 0 }}>
                   <div>
                     <p style={{ fontSize:'.72rem', color:'rgba(255,255,255,.35)', marginBottom:3 }}>
-                      System ({kw}kW × ₹{(rate / 1000).toFixed(0)}K/kW)
+                      System ({kw}kWp Solar + Inverter + BOS)
                     </p>
-                    <p style={{ fontSize:'1.2rem', fontWeight:900, color:WHITE }}>{fmt(kw * rate)}</p>
+                    <p style={{ fontSize:'1.2rem', fontWeight:900, color:WHITE }}>{fmt(systemCost)}</p>
                   </div>
                   {sType !== 'onGrid' && (
                     <div>
@@ -574,7 +677,7 @@ export default function QuotationGenerator() {
                   <p style={{ fontSize:'2.25rem', fontWeight:900, color:BLACK,
                               letterSpacing:'-.04em', lineHeight:1 }}>SolarJi</p>
                   <p style={{ fontSize:'.78rem', color:ORANGE, fontWeight:800, letterSpacing:'.05em' }}>
-                    SOLAR ENERGY SOLUTIONS
+                    RISING SOLAR ENERGY, KANPUR
                   </p>
                 </div>
               </div>
@@ -676,7 +779,7 @@ export default function QuotationGenerator() {
                         </p>
                         {sType !== 'onGrid' && (
                           <p style={{ fontSize:'.75rem', color:'#9ca3af', marginTop:3 }}>
-                            Includes {bats} Tubular {bats === 1 ? 'Battery' : 'Batteries'}{' '}
+                            Includes {bats} Nos {selectedBattery?.name || (bats === 1 ? 'Battery' : 'Batteries')}{' '}
                             @ {fmt(batteryPrice)} each (GST Incl.)
                           </p>
                         )}
@@ -835,9 +938,6 @@ export default function QuotationGenerator() {
                   {[
                     ['Solar Module',      '25 Years'],
                     ['Inverter',          '10 Years (Brand Warranty)'],
-                    ['Structure (GI)',    '30 Years'],
-                    ['Cables & BOS',      '5 Years'],
-                    ['On System',         '5 Years'],
                   ].map(([item, val]) => (
                     <div key={item}
                       style={{ display:'flex', justifyContent:'space-between', padding:'7px 0',
@@ -897,6 +997,7 @@ export default function QuotationGenerator() {
                     'Meter load should be at minimum equal to solar system capacity.',
                     'Wiring of solar output will be routed as mutually agreed with the customer.',
                     'Material delivered in extra quantity; surplus collected back after site completion.',
+                    'Any type of dispute subject to justification of court of law at Kanpur Nagar, when mutual settlement fails only.',
                   ].filter(Boolean).map((tc, i) => (
                     <li key={i} style={{ fontSize:'.8rem', color:'#6b7280', lineHeight:1.65 }}>{tc}</li>
                   ))}
@@ -938,7 +1039,7 @@ export default function QuotationGenerator() {
                                border:`2px solid ${ORANGE}` }}/>
                     <div>
                       <p style={{ fontWeight:900, color:BLACK, fontSize:'.85rem' }}>SolarJi</p>
-                      <p style={{ fontSize:'.7rem', color:'#9ca3af' }}>Solar Energy Solutions, Kanpur</p>
+                      <p style={{ fontSize:'.7rem', color:'#9ca3af' }}>Rising Solar Energy, Kanpur, Kanpur</p>
                     </div>
                   </div>
                 </div>

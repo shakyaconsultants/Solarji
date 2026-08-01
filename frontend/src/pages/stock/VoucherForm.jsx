@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, ShoppingCart, Package, Calendar, FileSpreadsheet, Eye } from 'lucide-react';
 import api from '../../api/axios';
@@ -25,17 +26,51 @@ export default function VoucherForm({ type }) {
   const [saving, setSaving] = useState(false);
   const [showBillSheet, setShowBillSheet] = useState(false);
   const [showFormPreview, setShowFormPreview] = useState(false);
-  const [rows, setRows] = useState([emptyVoucherRow()]);
+  const [rows, setRows] = useState(() => [
+    type === 'EXPENSE'
+      ? { item: undefined, itemName: '', unit: 'job', quantity: 1, price: '', total: 0 }
+      : emptyVoucherRow()
+  ]);
+  const [openDropdownIdx, setOpenDropdownIdx] = useState(null);
+  const [itemSearchText, setItemSearchText] = useState('');
+  const [dropdownCoords, setDropdownCoords] = useState(null);
+
+  useEffect(() => {
+    const handleScrollOrResize = () => {
+      setOpenDropdownIdx(null);
+      setDropdownCoords(null);
+    };
+    if (openDropdownIdx !== null) {
+      window.addEventListener('scroll', handleScrollOrResize, { passive: true });
+      window.addEventListener('resize', handleScrollOrResize);
+    }
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [openDropdownIdx]);
 
   const isSell = type === 'SELL';
-  const title = isSell ? 'Sales Voucher' : 'Purchase Voucher';
-  const partyLabel = isSell ? 'Customer Name' : 'Supplier Name';
-  const addressLabel = isSell ? 'Customer Address' : 'Supplier Address';
+  const isExpense = type === 'EXPENSE';
+  const title = isExpense ? 'Expense Voucher' : isSell ? 'Sales Voucher' : 'Purchase Voucher';
+  const partyLabel = isExpense ? 'Paid To' : isSell ? 'Customer Name' : 'Supplier Name';
+  const addressLabel = isExpense ? 'Recipient Address' : isSell ? 'Customer Address' : 'Supplier Address';
 
   useEffect(() => {
     if (type === 'ADD' && !isAdmin) {
       toast.error('Only admins can record purchases');
       navigate('/stock');
+      return;
+    }
+    if (type === 'EXPENSE' && !isAdmin) {
+      toast.error('Only admins can record expenses');
+      navigate('/stock');
+      return;
+    }
+
+    if (type === 'EXPENSE') {
+      setStockItems([]);
+      setItemsLoading(false);
       return;
     }
 
@@ -70,7 +105,12 @@ export default function VoucherForm({ type }) {
     setRows(newRows);
   };
 
-  const addRow = () => setRows([...rows, emptyVoucherRow()]);
+  const addRow = () => setRows([
+    ...rows,
+    type === 'EXPENSE'
+      ? { item: undefined, itemName: '', unit: 'job', quantity: 1, price: '', total: 0 }
+      : emptyVoucherRow()
+  ]);
   const removeRow = (idx) => rows.length > 1 && setRows(rows.filter((_, i) => i !== idx));
 
   const handleBillSheetApply = ({ rows: appliedRows, party: p, partyAddress: addr }) => {
@@ -92,7 +132,7 @@ export default function VoucherForm({ type }) {
   });
 
   const saveVoucher = useCallback(async () => {
-    const validRows = rows.filter((r) => r.item && Number(r.quantity) > 0);
+    const validRows = rows.filter((r) => (isExpense ? r.itemName : r.item) && Number(r.quantity) > 0);
     if (validRows.length === 0) {
       toast.error('Add at least one item');
       return false;
@@ -107,6 +147,8 @@ export default function VoucherForm({ type }) {
         date,
         items: validRows.map((r) => ({
           item: r.item,
+          itemName: r.itemName,
+          unit: r.unit || 'piece',
           quantity: Number(r.quantity),
           price: Number(r.price),
         })),
@@ -122,7 +164,7 @@ export default function VoucherForm({ type }) {
     } finally {
       setSaving(false);
     }
-  }, [rows, type, party, partyAddress, note, date, addStockVoucher, navigate, title]);
+  }, [rows, type, party, partyAddress, note, date, addStockVoucher, navigate, title, isExpense]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -130,7 +172,7 @@ export default function VoucherForm({ type }) {
   };
 
   const handleOpenPreview = () => {
-    const validRows = rows.filter((r) => r.item && Number(r.quantity) > 0);
+    const validRows = rows.filter((r) => (isExpense ? r.itemName : r.item) && Number(r.quantity) > 0);
     if (validRows.length === 0) return toast.error('Add at least one item before preview');
     setShowFormPreview(true);
   };
@@ -201,14 +243,16 @@ export default function VoucherForm({ type }) {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h3 className="font-semibold text-gray-700">Items</h3>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowBillSheet(true)}
-                  className="btn-secondary text-xs gap-1.5"
-                  disabled={itemsLoading}
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" /> Open Bill Sheet
-                </button>
+                {!isExpense && (
+                  <button
+                    type="button"
+                    onClick={() => setShowBillSheet(true)}
+                    className="btn-secondary text-xs gap-1.5"
+                    disabled={itemsLoading}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> Open Bill Sheet
+                  </button>
+                )}
                 <button type="button" onClick={addRow} className="btn-secondary text-xs gap-1">
                   <Plus className="w-3.5 h-3.5" /> Add Row
                 </button>
@@ -223,7 +267,7 @@ export default function VoucherForm({ type }) {
                     <th className="text-left py-2 px-2 font-semibold text-gray-600">Item</th>
                     <th className="text-right py-2 px-2 font-semibold text-gray-600 w-28">Quantity</th>
                     <th className="text-right py-2 px-2 font-semibold text-gray-600 w-36">
-                      {isSell ? 'Sell Price (₹)' : 'Purchase Price (₹)'}
+                      {isExpense ? 'Amount (₹)' : isSell ? 'Sell Price (₹)' : 'Purchase Price (₹)'}
                     </th>
                     <th className="text-right py-2 px-2 font-semibold text-gray-600 w-32">Total (₹)</th>
                     <th className="w-10" />
@@ -234,19 +278,117 @@ export default function VoucherForm({ type }) {
                     <tr key={idx} className="border-b border-gray-50">
                       <td className="py-2 px-2 text-gray-400">{idx + 1}</td>
                       <td className="py-2 px-2">
-                        <select
-                          className="input"
-                          value={row.item}
-                          onChange={(e) => handleItemChange(idx, e.target.value)}
-                          required={idx === 0}
-                        >
-                          <option value="">Select item...</option>
-                          {stockItems.map((i) => (
-                            <option key={i._id} value={i._id}>
-                              {i.name} (Stock: {i.quantity} {i.unit})
-                            </option>
-                          ))}
-                        </select>
+                        {isExpense ? (
+                          <input
+                            type="text"
+                            className="input"
+                            style={{ minWidth: '220px' }}
+                            value={row.itemName || ''}
+                            onChange={(e) => handleRowChange(idx, 'itemName', e.target.value)}
+                            placeholder="Expense description (e.g. Labor, Rent)"
+                            required={idx === 0}
+                          />
+                        ) : (
+                          <div style={{ position: 'relative' }}>
+                            <input type="hidden" value={row.item} required={idx === 0} />
+                            <button
+                              type="button"
+                              className="input text-left flex justify-between items-center w-full"
+                              style={{ background: '#fff', cursor: 'pointer', minWidth: '220px' }}
+                              onClick={(e) => {
+                                if (openDropdownIdx === idx) {
+                                  setOpenDropdownIdx(null);
+                                  setDropdownCoords(null);
+                                  setItemSearchText('');
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setDropdownCoords({
+                                    top: rect.bottom + window.scrollY,
+                                    left: rect.left + window.scrollX,
+                                    width: rect.width
+                                  });
+                                  setOpenDropdownIdx(idx);
+                                  setItemSearchText('');
+                                }
+                              }}
+                            >
+                              <span className="truncate">
+                                {row.itemName ? `${row.itemName} (${row.unit})` : 'Select item...'}
+                              </span>
+                              <span className="text-gray-400 text-xs ml-1 font-mono">▼</span>
+                            </button>
+
+                            {/* Dropdown Overlay via Portal */}
+                            {openDropdownIdx === idx && dropdownCoords && createPortal(
+                              <>
+                                <div
+                                  style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+                                  onClick={() => {
+                                    setOpenDropdownIdx(null);
+                                    setDropdownCoords(null);
+                                    setItemSearchText('');
+                                  }}
+                                />
+                                
+                                <div
+                                  className="card shadow-xl"
+                                  style={{
+                                    position: 'absolute',
+                                    top: `${dropdownCoords.top}px`,
+                                    left: `${dropdownCoords.left}px`,
+                                    width: `${dropdownCoords.width}px`,
+                                    zIndex: 200,
+                                    maxHeight: '260px',
+                                    overflowY: 'auto',
+                                    marginTop: '4px',
+                                    padding: '8px',
+                                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                                    border: '1px solid #e5e7eb',
+                                    background: '#fff',
+                                  }}
+                                >
+                                  <input
+                                    type="text"
+                                    className="input text-xs mb-2 py-1.5 px-3 w-full"
+                                    placeholder="Type to search..."
+                                    value={itemSearchText}
+                                    onChange={(e) => setItemSearchText(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <div style={{ display: 'grid', gap: '2px' }}>
+                                    {stockItems
+                                      .filter((i) =>
+                                        i.name.toLowerCase().includes(itemSearchText.toLowerCase())
+                                      )
+                                      .map((i) => (
+                                        <button
+                                          key={i._id}
+                                          type="button"
+                                          className="text-left w-full px-2.5 py-2 text-xs font-semibold rounded-lg hover:bg-gray-100 text-gray-800 transition-colors"
+                                          onClick={() => {
+                                            handleItemChange(idx, i._id);
+                                            setOpenDropdownIdx(null);
+                                            setDropdownCoords(null);
+                                            setItemSearchText('');
+                                          }}
+                                        >
+                                          {i.name} (Stock: {i.quantity} {i.unit})
+                                        </button>
+                                      ))}
+                                    {stockItems.filter((i) =>
+                                      i.name.toLowerCase().includes(itemSearchText.toLowerCase())
+                                    ).length === 0 && (
+                                      <div className="text-center text-xs text-gray-400 py-3 font-semibold">
+                                        No items match search
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>,
+                              document.body
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 px-2">
                         <input
@@ -264,8 +406,6 @@ export default function VoucherForm({ type }) {
                           value={row.price}
                           onChange={(e) => handleRowChange(idx, 'price', e.target.value)}
                           placeholder="0"
-                          readOnly={isSell}
-                          style={isSell ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                         />
                       </td>
                       <td className="py-2 px-2 text-right font-medium text-gray-700">
@@ -290,9 +430,11 @@ export default function VoucherForm({ type }) {
                 </tfoot>
               </table>
             </div>
-            <p className="text-xs text-gray-400 mt-3">
-              Use <strong>Open Bill Sheet</strong> for 40-line entry, preview there, then apply. Or preview &amp; save from this form.
-            </p>
+            {!isExpense && (
+              <p className="text-xs text-gray-400 mt-3">
+                Use <strong>Open Bill Sheet</strong> for 40-line entry, preview there, then apply. Or preview &amp; save from this form.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -307,7 +449,7 @@ export default function VoucherForm({ type }) {
             </button>
             <button
               type="submit"
-              className={`flex-1 min-w-[120px] justify-center ${isSell ? 'btn-primary' : 'btn-success'}`}
+              className={`flex-1 min-w-[120px] justify-center ${isExpense ? 'btn-danger' : isSell ? 'btn-primary' : 'btn-success'}`}
               disabled={saving || itemsLoading}
             >
               <Save className="w-4 h-4" />

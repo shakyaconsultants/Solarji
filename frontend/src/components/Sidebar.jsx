@@ -21,6 +21,7 @@ const STOCK_LINKS = [
   { to:'/stock',              label:'Dashboard',      icon:BarChart3,   end:true },
   { to:'/stock/items',        label:'Inventory',       icon:Package },
   { to:'/stock/voucher/add',  label:'Purchase Voucher',icon:ShoppingCart },
+  { to:'/stock/voucher/expense', label:'Expense Voucher', icon:FileText },
   { to:'/stock/voucher/sell', label:'Sales Voucher',   icon:FileText },
   { to:'/stock/vouchers',     label:'Voucher History', icon:FileText },
 ];
@@ -77,7 +78,9 @@ export default function Sidebar({ module, onNavigate, onCloseMobile }) {
   const { user, logout, isAdmin, canViewTeam, canAccessStock, canAccessComplaints } = useAuth();
   const navigate = useNavigate();
   const links = (module === 'stock' ? STOCK_LINKS : CRM_LINKS).filter(
-    (l) => l.to !== '/crm/complaints' || canAccessComplaints,
+    (l) => (l.to !== '/crm/complaints' || canAccessComplaints) &&
+           (l.to !== '/stock/voucher/add' || isAdmin) &&
+           (l.to !== '/stock/voucher/expense' || isAdmin)
   );
 
   return (

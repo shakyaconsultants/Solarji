@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, ShoppingCart, FileText, Plus, TrendingUp, AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
+import { Package, ShoppingCart, FileText, Plus, Minus, TrendingUp, AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
 import Layout from '../../components/Layout';
 import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
@@ -83,7 +83,10 @@ export default function StockDashboard() {
               <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             </button>
             {isAdmin && (
-              <button onClick={()=>navigate('/stock/voucher/add')} className="btn-success"><Plus size={15}/> Purchase</button>
+              <>
+                <button onClick={()=>navigate('/stock/voucher/add')} className="btn-success"><Plus size={15}/> Purchase</button>
+                <button onClick={()=>navigate('/stock/voucher/expense')} className="btn-danger"><Minus size={15}/> Expense</button>
+              </>
             )}
             <button onClick={()=>navigate('/stock/voucher/sell')} className="btn-primary"><ShoppingCart size={15}/> Sell</button>
           </div>
