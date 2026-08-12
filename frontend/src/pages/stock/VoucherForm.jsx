@@ -74,7 +74,7 @@ export default function VoucherForm({ type }) {
       return;
     }
 
-    api.get('/stock/items', { params: { picker: 1, limit: 100 } })
+    api.get('/stock/items', { params: { picker: 1, limit: 1000 } })
       .then((res) => setStockItems(res.data.items || []))
       .catch((err) => showApiError(err, 'Could not load stock items for voucher.'))
       .finally(() => setItemsLoading(false));

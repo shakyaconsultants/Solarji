@@ -75,7 +75,7 @@ export function buildDraftVoucher({
   preparedBy,
 }) {
   const items = (rows || [])
-    .filter((r) => r.item && Number(r.quantity) > 0)
+    .filter((r) => (type === 'EXPENSE' ? r.itemName : r.item) && Number(r.quantity) > 0)
     .map((r) => {
       const quantity = Number(r.quantity);
       const price = Number(r.price);

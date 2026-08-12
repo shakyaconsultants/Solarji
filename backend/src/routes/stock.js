@@ -85,7 +85,7 @@ router.get('/items', stockAccess, async (req, res) => {
     const isAdminUser = isAdmin(req.user);
     if (req.query.picker === '1') {
       const search = (req.query.search || '').trim();
-      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 100));
+      const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
       const filter = { isActive: true };
       if (search) filter.name = { $regex: search, $options: 'i' };
       const selectFields = isAdminUser
