@@ -83,7 +83,7 @@ export default function AdminQuotations() {
   }, []);
 
   useEffect(() => {
-    api.get('/stock/items', { params: { picker: 1, limit: 100 } })
+    api.get('/stock/items', { params: { picker: 1, limit: 1000 } })
       .then(res => {
         setStockItems(res.data.items || []);
       })
@@ -923,7 +923,7 @@ export default function AdminQuotations() {
             {/* Top red header banner */}
             <div className="print-header-bg text-white px-4 py-2 flex items-center justify-between" style={{ backgroundColor: ACCENT_COLOR, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                <span>📞 {customerPhone || '7233050533'}</span>
+                <span>📞 {'7233050533'}</span>
                 <span>✉️ risingsolarenergyup@gmail.com</span>
               </div>
               <div style={{ fontSize: '10px', fontWeight: 'bold', textAlign: 'right', lineHeight: '1.3', maxWidth: '60%' }}>
