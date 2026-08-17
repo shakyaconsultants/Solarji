@@ -6,6 +6,7 @@ import Layout from '../../components/Layout';
 import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 import logo from '../../assets/solarji logo.jpeg';
+import signature from '../../assets/signature.png';
 
 const ACCENT_COLOR = '#f7941d'; // Brand orange color
 const DARK_GRAY = '#1E1E1E';
@@ -1142,9 +1143,14 @@ export default function AdminQuotations() {
 
             {/* Right Section: Signature block */}
             <div className="text-right flex flex-col justify-end items-end h-full pb-2">
-              <div className="w-36 border-b border-gray-300 mb-2"></div>
-              <p className="font-bold text-gray-800 text-[11px]">For Rising Solar Energy</p>
-              <p className="text-[9px] text-gray-400 mt-0.5">Authorized Signatory</p>
+              <img
+                src={signature}
+                alt="Signature Stamp"
+                className="h-16 object-contain mb-1"
+                style={{ mixBlendMode: 'multiply' }}
+              />
+              {/* <p className="font-bold text-gray-800 text-[11px]">For Rising Solar Energy</p> */}
+              {/* <p className="text-[9px] text-gray-400 mt-0.5">Authorized Signatory</p> */}
             </div>
           </div>
         </div>
