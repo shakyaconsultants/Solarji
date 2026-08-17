@@ -28,7 +28,7 @@ export default function VoucherForm({ type }) {
   const [showFormPreview, setShowFormPreview] = useState(false);
   const [rows, setRows] = useState(() => [
     type === 'EXPENSE'
-      ? { item: undefined, itemName: '', unit: 'job', quantity: 1, price: '', total: 0 }
+      ? { item: undefined, itemName: '', unit: 'job', quantity: 1, price: '', gst: 18, total: 0 }
       : emptyVoucherRow()
   ]);
   const [openDropdownIdx, setOpenDropdownIdx] = useState(null);
@@ -89,10 +89,12 @@ export default function VoucherForm({ type }) {
       itemName: stockItem?.name || '',
       unit: stockItem?.unit || '',
       price: isSell ? (stockItem?.sellPrice ?? '') : (stockItem?.purchasePrice ?? ''),
+      gst: newRows[idx].gst || 18,
     };
     const qty = parseFloat(newRows[idx].quantity) || 0;
     const price = parseFloat(newRows[idx].price) || 0;
-    newRows[idx].total = qty * price;
+    const gst = parseFloat(newRows[idx].gst) || 0;
+    newRows[idx].total = qty * price * (1 + gst / 100);
     setRows(newRows);
   };
 
@@ -101,14 +103,15 @@ export default function VoucherForm({ type }) {
     newRows[idx] = { ...newRows[idx], [field]: val };
     const qty = parseFloat(newRows[idx].quantity) || 0;
     const price = parseFloat(newRows[idx].price) || 0;
-    newRows[idx].total = qty * price;
+    const gst = parseFloat(newRows[idx].gst) || 0;
+    newRows[idx].total = qty * price * (1 + gst / 100);
     setRows(newRows);
   };
 
   const addRow = () => setRows([
     ...rows,
     type === 'EXPENSE'
-      ? { item: undefined, itemName: '', unit: 'job', quantity: 1, price: '', total: 0 }
+      ? { item: undefined, itemName: '', unit: 'job', quantity: 1, price: '', gst: 18, total: 0 }
       : emptyVoucherRow()
   ]);
   const removeRow = (idx) => rows.length > 1 && setRows(rows.filter((_, i) => i !== idx));
@@ -151,6 +154,7 @@ export default function VoucherForm({ type }) {
           unit: r.unit || 'piece',
           quantity: Number(r.quantity),
           price: Number(r.price),
+          gst: Number(r.gst || 0),
         })),
       };
       const res = await api.post('/stock/vouchers', payload);
@@ -265,11 +269,12 @@ export default function VoucherForm({ type }) {
                   <tr className="border-b-2 border-gray-100">
                     <th className="text-left py-2 px-2 font-semibold text-gray-600 w-8">#</th>
                     <th className="text-left py-2 px-2 font-semibold text-gray-600">Item</th>
-                    <th className="text-right py-2 px-2 font-semibold text-gray-600 w-28">Quantity</th>
-                    <th className="text-right py-2 px-2 font-semibold text-gray-600 w-36">
+                    <th className="text-right py-2 px-2 font-semibold text-gray-600 w-24">Quantity</th>
+                    <th className="text-right py-2 px-2 font-semibold text-gray-600 w-32">
                       {isExpense ? 'Amount (₹)' : isSell ? 'Sell Price (₹)' : 'Purchase Price (₹)'}
                     </th>
-                    <th className="text-right py-2 px-2 font-semibold text-gray-600 w-32">Total (₹)</th>
+                    <th className="text-right py-2 px-2 font-semibold text-gray-600 w-24">GST %</th>
+                    <th className="text-right py-2 px-2 font-semibold text-gray-600 w-28">Total (₹)</th>
                     <th className="w-10" />
                   </tr>
                 </thead>
@@ -408,6 +413,19 @@ export default function VoucherForm({ type }) {
                           placeholder="0"
                         />
                       </td>
+                      <td className="py-2 px-2">
+                        <select
+                          className="input text-right font-semibold"
+                          value={row.gst ?? 18}
+                          onChange={(e) => handleRowChange(idx, 'gst', e.target.value)}
+                        >
+                          <option value={0}>0%</option>
+                          <option value={5}>5%</option>
+                          <option value={12}>12%</option>
+                          <option value={18}>18%</option>
+                          <option value={28}>28%</option>
+                        </select>
+                      </td>
                       <td className="py-2 px-2 text-right font-medium text-gray-700">
                         ₹{(row.total || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </td>
@@ -421,7 +439,7 @@ export default function VoucherForm({ type }) {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-200 bg-gray-50">
-                    <td colSpan={4} className="py-3 px-2 text-right font-semibold text-gray-700">Total Amount:</td>
+                    <td colSpan={5} className="py-3 px-2 text-right font-semibold text-gray-700">Total Amount:</td>
                     <td className="py-3 px-2 text-right font-bold text-lg text-solar-700">
                       ₹{totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                     </td>

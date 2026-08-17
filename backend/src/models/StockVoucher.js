@@ -6,6 +6,7 @@ const voucherItemSchema = new mongoose.Schema({
   unit: { type: String, default: 'piece' },
   quantity: { type: Number, required: true, min: 1 },
   price: { type: Number, required: true },
+  gst: { type: Number, default: 0 },
   total: { type: Number, required: true },
 });
 

@@ -67,11 +67,12 @@ const billStyles = `
   .voucher-bill.styled .voucher-bill-table th { background: rgba(247,148,29,.12); }
   .voucher-bill-table th { background: #f3f4f6; font-weight: 700; text-align: center; }
   .voucher-bill-table .col-sno { width: 6%; text-align: center; }
-  .voucher-bill-table .col-item { width: 38%; text-align: left; word-break: break-word; }
-  .voucher-bill-table .col-qty { width: 10%; text-align: center; }
-  .voucher-bill-table .col-unit { width: 10%; text-align: center; }
-  .voucher-bill-table .col-rate { width: 16%; text-align: right; }
-  .voucher-bill-table .col-amt { width: 20%; text-align: right; }
+  .voucher-bill-table .col-item { width: 34%; text-align: left; word-break: break-word; }
+  .voucher-bill-table .col-qty { width: 8%; text-align: center; }
+  .voucher-bill-table .col-unit { width: 8%; text-align: center; }
+  .voucher-bill-table .col-rate { width: 14%; text-align: right; }
+  .voucher-bill-table .col-gst { width: 12%; text-align: center; }
+  .voucher-bill-table .col-amt { width: 18%; text-align: right; }
   .voucher-bill-table tbody td { height: 18px; }
   .voucher-bill-row-empty td { color: transparent; }
   .voucher-bill-row-empty .col-sno { color: #999; }
@@ -233,6 +234,7 @@ export default function VoucherBillDocument({ voucher, className = '', styled = 
               <th className="col-qty">Qty</th>
               <th className="col-unit">Unit</th>
               <th className="col-rate">Rate (₹)</th>
+              <th className="col-gst">GST %</th>
               <th className="col-amt">Amount (₹)</th>
             </tr>
           </thead>
@@ -246,6 +248,7 @@ export default function VoucherBillDocument({ voucher, className = '', styled = 
                 <td className="col-qty">{line.qty !== '' ? line.qty : ''}</td>
                 <td className="col-unit">{line.unit || ''}</td>
                 <td className="col-rate">{line.rate !== '' ? formatMoney(line.rate) : ''}</td>
+                <td className="col-gst">{line.gst !== '' && line.gst !== undefined ? `${line.gst}%` : ''}</td>
                 <td className="col-amt">{line.amount !== '' ? formatMoney(line.amount) : ''}</td>
               </tr>
             );})}

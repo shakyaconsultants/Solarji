@@ -17,7 +17,8 @@ const ORANGE = '#f7941d';
 function recalcRow(row) {
   const qty = parseFloat(row.quantity) || 0;
   const price = parseFloat(row.price) || 0;
-  return { ...row, total: qty * price };
+  const gst = parseFloat(row.gst) || 0;
+  return { ...row, total: qty * price * (1 + gst / 100) };
 }
 
 function filledRows(rows) {
@@ -133,6 +134,7 @@ export default function VoucherBillSheetModal({
         itemName: stockItem?.name || '',
         unit: stockItem?.unit || '',
         price: isSell ? (stockItem?.sellPrice ?? '') : (stockItem?.purchasePrice ?? ''),
+        gst: next[idx].gst || 18,
       });
       return next;
     });
@@ -268,11 +270,12 @@ export default function VoucherBillSheetModal({
                     <thead className="sticky top-0 bg-gray-100 z-10">
                       <tr className="border-b border-gray-800">
                         <th className="py-2.5 px-2 font-bold w-12 text-center border-r border-gray-300">S.No.</th>
-                        <th className="py-2.5 px-2 font-bold text-left border-r border-gray-300 min-w-[200px]">Part Name / Item</th>
-                        <th className="py-2.5 px-2 font-bold w-20 text-center border-r border-gray-300">Qty</th>
+                        <th className="py-2.5 px-2 font-bold text-left border-r border-gray-300 min-w-[180px]">Part Name / Item</th>
+                        <th className="py-2.5 px-2 font-bold w-16 text-center border-r border-gray-300">Qty</th>
                         <th className="py-2.5 px-2 font-bold w-16 text-center border-r border-gray-300">Unit</th>
-                        <th className="py-2.5 px-2 font-bold w-28 text-right border-r border-gray-300">Rate (₹)</th>
-                        <th className="py-2.5 px-2 font-bold w-28 text-right border-r border-gray-300">Amount (₹)</th>
+                        <th className="py-2.5 px-2 font-bold w-24 text-right border-r border-gray-300">Rate (₹)</th>
+                        <th className="py-2.5 px-2 font-bold w-20 text-right border-r border-gray-300">GST %</th>
+                        <th className="py-2.5 px-2 font-bold w-24 text-right border-r border-gray-300">Amount (₹)</th>
                         <th className="w-10" />
                       </tr>
                     </thead>
@@ -397,6 +400,19 @@ export default function VoucherBillSheetModal({
                               value={row.price}
                               onChange={(e) => handleRowChange(idx, 'price', e.target.value)}
                             />
+                          </td>
+                          <td className="py-1 px-1 border-r border-gray-100">
+                            <select
+                              className="input py-1.5 text-xs text-right font-semibold w-full"
+                              value={row.gst ?? 18}
+                              onChange={(e) => handleRowChange(idx, 'gst', e.target.value)}
+                            >
+                              <option value={0}>0%</option>
+                              <option value={5}>5%</option>
+                              <option value={12}>12%</option>
+                              <option value={18}>18%</option>
+                              <option value={28}>28%</option>
+                            </select>
                           </td>
                           <td className="py-1 px-2 text-right font-medium border-r border-gray-100 whitespace-nowrap">
                             {row.total ? `₹${Number(row.total).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—'}

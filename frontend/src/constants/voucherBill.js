@@ -11,7 +11,7 @@ export const COMPANY = {
 };
 
 export function emptyVoucherRow() {
-  return { item: '', itemName: '', unit: '', quantity: '', price: '', total: 0 };
+  return { item: '', itemName: '', unit: '', quantity: '', price: '', gst: 18, total: 0 };
 }
 
 export function createBillPadRows(count = BILL_PAD_ROWS) {
@@ -23,13 +23,15 @@ export function buildBillLines(items, padRows = BILL_PAD_ROWS) {
   const filled = (items || []).map((item, index) => {
     const qty = item.quantity ?? '';
     const rate = item.price ?? 0;
-    const amount = item.total ?? (Number(qty) * Number(rate));
+    const gst = item.gst ?? 0;
+    const amount = item.total ?? (Number(qty) * Number(rate) * (1 + gst / 100));
     return {
       sno: index + 1,
       name: item.itemName || '',
       qty,
       unit: item.unit || 'piece',
       rate,
+      gst,
       amount,
     };
   });
@@ -42,6 +44,7 @@ export function buildBillLines(items, padRows = BILL_PAD_ROWS) {
       qty: '',
       unit: '',
       rate: '',
+      gst: '',
       amount: '',
     });
   }
@@ -79,12 +82,15 @@ export function buildDraftVoucher({
     .map((r) => {
       const quantity = Number(r.quantity);
       const price = Number(r.price);
-      const total = Number(r.total) || quantity * price;
+      const gst = Number(r.gst || 0);
+      const total = Number(r.total) || quantity * price * (1 + gst / 100);
       return {
+        item: r.item,
         itemName: r.itemName,
         unit: r.unit || 'piece',
         quantity,
         price,
+        gst,
         total,
       };
     });

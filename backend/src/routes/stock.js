@@ -65,7 +65,8 @@ function applyVoucherRowChange(changes, stockItem, type, row) {
   if (row.price && type === 'ADD') change.purchasePrice = row.price;
   if (row.price && type === 'SELL') change.sellPrice = row.price;
 
-  return { price, total: price * row.quantity };
+  const gst = Number(row.gst) || 0;
+  return { price, total: price * row.quantity * (1 + gst / 100) };
 }
 
 function buildStockBulkOps(changes) {
@@ -293,7 +294,8 @@ router.post('/vouchers', stockTransact, async (req, res) => {
       for (const row of items) {
         const qty = Number(row.quantity) || 1;
         const price = Number(row.price) || 0;
-        const total = qty * price;
+        const gst = Number(row.gst) || 0;
+        const total = qty * price * (1 + gst / 100);
         totalAmount += total;
 
         processedItems.push({
@@ -301,6 +303,7 @@ router.post('/vouchers', stockTransact, async (req, res) => {
           unit: row.unit || 'piece',
           quantity: qty,
           price,
+          gst,
           total,
         });
       }
@@ -342,6 +345,7 @@ router.post('/vouchers', stockTransact, async (req, res) => {
         unit: stockItem.unit || 'piece',
         quantity: row.quantity,
         price,
+        gst: Number(row.gst) || 0,
         total,
       });
     }
