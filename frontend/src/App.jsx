@@ -25,6 +25,8 @@ const VoucherPreview = lazy(() => import('./pages/stock/VoucherPreview'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const AdminQuotations = lazy(() => import('./pages/admin/AdminQuotations'))
 const Attendance = lazy(() => import('./pages/crm/Attendance'))
+const FirstPaid = lazy(() => import('./pages/crm/FirstPaid'))
+const PendingBalance = lazy(() => import('./pages/crm/PendingBalance'))
 
 function PageLoader() {
   return (
@@ -74,6 +76,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/crm" element={<LazyPage><CRMDashboard /></LazyPage>} />
         <Route path="/crm/leads" element={<LazyPage><Leads /></LazyPage>} />
+        <Route path="/crm/first-paid" element={<LazyPage><FirstPaid /></LazyPage>} />
+        <Route path="/crm/pending-balance" element={<LazyPage><PendingBalance /></LazyPage>} />
         <Route path="/crm/leads/new" element={<LazyPage><NewLead /></LazyPage>} />
         <Route path="/crm/leads/:id" element={<LazyPage><LeadDetail /></LazyPage>} />
         <Route path="/crm/users" element={<LazyPage adminOnly><Users /></LazyPage>} />

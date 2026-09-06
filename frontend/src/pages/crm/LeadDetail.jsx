@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Edit2, MessageSquare, GitBranch, User, Phone, Mail, MapPin,
   RefreshCw, Star, Clock, Calendar, ImagePlus, X, Trash2,
-  FileText, CreditCard, Building, Receipt, Camera, Upload, ExternalLink, Eye
+  FileText, CreditCard, Building, Receipt, Camera, Upload, ExternalLink, Eye,
+  IndianRupee, Plus, CheckCircle2, Wallet, Banknote, AlertCircle
 } from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
@@ -24,7 +25,11 @@ const DOCUMENT_SLOTS = [
   { id: 'rooftopPhoto', label: 'Rooftop Photo', icon: Camera },
 ];
 
-const STAGES = ['Lead', 'Calling', 'Visit', 'Filing', 'Loan Filing', 'Loan Process', 'Loan Release', 'Installation', 'Kesco Filing', 'Kesco Process', 'Meter Install', 'Subsidy Apply', 'Subsidy Release', 'Commission'];
+const STAGES = [
+  'Lead', 'Calling', 'Visit', 'Filing', 'Loan Filing', 'Loan Process',
+  'Loan Release', 'Installation', 'Kesco Filing', 'Kesco Process',
+  'Meter Install', 'Subsidy Apply', 'Subsidy Release', 'Commission'
+];
 
 const stageColors = {
   'Lead': 'bg-gray-100 text-gray-700 border-gray-300',
@@ -76,17 +81,36 @@ export default function LeadDetail() {
   } = useDataCache();
   const lead = leadDetails[id];
   const detailLoading = isLoading(`leadDetail:${id}`);
+
+  // Note state
   const [note, setNote] = useState('');
   const [noteImages, setNoteImages] = useState([]); // [{ file, previewUrl }]
   const [addingNote, setAddingNote] = useState(false);
-  const [lightbox, setLightbox] = useState(null); // image url
+  const [lightbox, setLightbox] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Move stage modal
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveStage, setMoveStage] = useState('');
   const [moveUser, setMoveUser] = useState('');
   const [moveNote, setMoveNote] = useState('');
   const [moving, setMoving] = useState(false);
+
+  // Document upload state
   const [uploadingDoc, setUploadingDoc] = useState(null);
+
+  // Financial & Payment States (accessible to Admin & Employees)
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState('cash'); // 'cash' | 'account'
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [payNote, setPayNote] = useState('');
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+
+  const [showCostModal, setShowCostModal] = useState(false);
+  const [editCost, setEditCost] = useState('');
+  const [updatingCost, setUpdatingCost] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState(null);
 
   const handleUploadDoc = async (docId, file) => {
     if (!file) return;
@@ -111,11 +135,9 @@ export default function LeadDetail() {
 
   useEffect(() => {
     return () => {
-      // Free any in-memory image previews when leaving the page
       noteImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [noteImages]);
 
   useEffect(() => {
     ensureLeadDetail(id);
@@ -124,10 +146,69 @@ export default function LeadDetail() {
 
   useEffect(() => {
     if (lead) {
-      setMoveStage(lead.stage);
+      setMoveStage(lead.stage || '');
       setMoveUser(lead.assignedTo?._id || '');
+      setEditCost(lead.plantCost || '');
     }
   }, [lead]);
+
+  // Payment handlers
+  const handleAddPayment = async (e) => {
+    e.preventDefault();
+    const num = Number(payAmount);
+    if (!num || num <= 0) return toast.error('Please enter a valid payment amount');
+    setSubmittingPayment(true);
+    try {
+      const res = await api.post(`/leads/${id}/payments`, {
+        amount: num,
+        method: payMethod,
+        date: payDate || new Date().toISOString(),
+        note: payNote,
+      });
+      upsertLead(res.data);
+      setShowPaymentModal(false);
+      setPayAmount('');
+      setPayNote('');
+      setPayMethod('cash');
+      toast.success(`Payment of ₹${num.toLocaleString('en-IN')} (${payMethod === 'account' ? 'Bank Account' : 'Cash'}) recorded!`);
+    } catch (err) {
+      showApiError(err, 'Could not record payment.');
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!paymentId) return;
+    if (!window.confirm('Delete this payment record? This action cannot be undone.')) return;
+    setDeletingPaymentId(paymentId);
+    try {
+      const res = await api.delete(`/leads/${id}/payments/${paymentId}`);
+      upsertLead(res.data);
+      toast.success('Payment record deleted');
+    } catch (err) {
+      showApiError(err, 'Could not delete payment record.');
+    } finally {
+      setDeletingPaymentId(null);
+    }
+  };
+
+  const handleUpdatePlantCost = async (e) => {
+    e.preventDefault();
+    setUpdatingCost(true);
+    try {
+      const res = await api.put(`/leads/${id}/plant-cost`, {
+        plantCost: Math.max(0, Number(editCost) || 0),
+      });
+      upsertLead(res.data);
+      setShowCostModal(false);
+      toast.success('Plant cost updated successfully');
+    } catch (err) {
+      showApiError(err, 'Could not update plant cost.');
+    } finally {
+      setUpdatingCost(false);
+    }
+  };
 
   const handleAddNote = async () => {
     const text = note.trim();
@@ -236,21 +317,31 @@ export default function LeadDetail() {
 
   if (detailLoading && !lead) return (
     <Layout module="crm">
-      <div className="flex items-center justify-center h-64 text-gray-400">Loading lead...</div>
+      <div className="flex items-center justify-center h-64 text-gray-400">Loading customer details...</div>
     </Layout>
   );
 
   if (!lead) return (
     <Layout module="crm">
-      <div className="p-4 sm:p-6 text-center text-gray-500">Lead not found</div>
+      <div className="p-4 sm:p-6 text-center text-gray-500">Customer not found</div>
     </Layout>
   );
 
+  // Financial calculations
+  const plantCost = Number(lead.plantCost) || 0;
+  const payments = lead.payments || [];
+  const totalPaid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const remainingBalance = Math.max(0, plantCost - totalPaid);
+  const sortedPayments = [...payments].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const firstPayment = sortedPayments[0] || null;
+  const firstPaymentAmount = firstPayment ? (Number(firstPayment.amount) || 0) : 0;
+  const percentPaid = plantCost > 0 ? Math.min(100, Math.round((totalPaid / plantCost) * 100)) : (totalPaid > 0 ? 100 : 0);
+
   return (
     <Layout module="crm">
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/crm/leads')} className="btn-secondary p-2">
               <ArrowLeft className="w-4 h-4" />
@@ -286,8 +377,192 @@ export default function LeadDetail() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left - Info */}
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-5">
+            {/* Plant Financials & Payments Tracking Card */}
+            <div className="card border-orange-100 shadow-sm">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-orange-100 text-orange-600">
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Plant Cost & Payment Tracking</h3>
+                    <p className="text-xs text-gray-500">Record payments (Cash / Bank Account) & manage plant value</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditCost(plantCost || '');
+                      setShowCostModal(true);
+                    }}
+                    className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 hover:border-orange-300"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>{plantCost > 0 ? 'Edit Cost' : 'Set Plant Cost'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPayAmount('');
+                      setPayNote('');
+                      setPayMethod('cash');
+                      setPayDate(new Date().toISOString().split('T')[0]);
+                      setShowPaymentModal(true);
+                    }}
+                    className="btn-primary py-1.5 px-3 text-xs flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Record Payment</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Financial Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                {/* Plant Cost */}
+                <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Plant Cost</p>
+                  <p className="text-lg font-black text-gray-900 mt-1">₹{plantCost.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{lead.systemSize || 'Standard'}</p>
+                </div>
+
+                {/* Total Paid */}
+                <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200">
+                  <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Total Paid</p>
+                  <p className="text-lg font-black text-emerald-800 mt-1">₹{totalPaid.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">{percentPaid}% completed</p>
+                </div>
+
+                {/* First Payment */}
+                <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200">
+                  <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">First Payment</p>
+                  <p className="text-lg font-black text-blue-900 mt-1">
+                    {firstPayment ? `₹${firstPaymentAmount.toLocaleString('en-IN')}` : '—'}
+                  </p>
+                  <p className="text-[11px] text-blue-600 mt-0.5 truncate">
+                    {firstPayment ? `${firstPayment.method.toUpperCase()} · ${new Date(firstPayment.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}` : 'Not paid yet'}
+                  </p>
+                </div>
+
+                {/* Remaining Balance */}
+                <div className={`p-3 rounded-xl border ${remainingBalance === 0 && plantCost > 0 ? 'bg-emerald-50 border-emerald-300' : 'bg-amber-50/60 border-amber-200'}`}>
+                  <p className={`text-[11px] font-bold uppercase tracking-wider ${remainingBalance === 0 && plantCost > 0 ? 'text-emerald-700' : 'text-amber-800'}`}>
+                    Balance Left
+                  </p>
+                  <p className={`text-lg font-black mt-1 ${remainingBalance === 0 && plantCost > 0 ? 'text-emerald-800' : 'text-amber-900'}`}>
+                    ₹{remainingBalance.toLocaleString('en-IN')}
+                  </p>
+                  <span className={`inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full mt-0.5 ${remainingBalance === 0 && plantCost > 0 ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'}`}>
+                    {remainingBalance === 0 && plantCost > 0 ? 'FULLY PAID' : 'PENDING'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {plantCost > 0 && (
+                <div className="mb-5 bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${remainingBalance === 0 ? 'bg-emerald-500' : 'bg-gradient-to-r from-orange-500 to-emerald-500'}`}
+                    style={{ width: `${percentPaid}%` }}
+                  />
+                </div>
+              )}
+
+              {/* Payment History List / Table */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Receipt className="w-3.5 h-3.5 text-solar-500" />
+                    Payment History ({payments.length})
+                  </h4>
+                  {payments.length > 0 && (
+                    <span className="text-[11px] text-gray-500 font-medium">
+                      {payments.length} installment{payments.length > 1 ? 's' : ''} recorded
+                    </span>
+                  )}
+                </div>
+
+                {payments.length === 0 ? (
+                  <div className="p-6 text-center border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                    <Banknote className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-gray-600">No payment records found</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Click "Record Payment" to record cash or bank account transactions</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-gray-50/80 text-gray-500 border-b border-gray-200">
+                        <tr>
+                          <th className="py-2.5 px-3 font-semibold">#</th>
+                          <th className="py-2.5 px-3 font-semibold">Date</th>
+                          <th className="py-2.5 px-3 font-semibold">Amount</th>
+                          <th className="py-2.5 px-3 font-semibold">Method</th>
+                          <th className="py-2.5 px-3 font-semibold">Note / Remarks</th>
+                          <th className="py-2.5 px-3 font-semibold">Recorded By</th>
+                          <th className="py-2.5 px-3 font-semibold text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {sortedPayments.map((p, idx) => {
+                          const isFirst = idx === 0;
+                          return (
+                            <tr key={p._id || idx} className="hover:bg-gray-50/60 transition-colors">
+                              <td className="py-2.5 px-3 text-gray-400 font-mono">
+                                {idx + 1}
+                                {isFirst && (
+                                  <span className="ml-1.5 inline-block text-[9px] font-black bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                    1ST
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">
+                                {new Date(p.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
+                              </td>
+                              <td className="py-2.5 px-3 font-bold text-gray-900 whitespace-nowrap">
+                                ₹{Number(p.amount).toLocaleString('en-IN')}
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                  p.method === 'account'
+                                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                }`}>
+                                  {p.method === 'account' ? 'Bank Account' : 'Cash'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-gray-600 max-w-[200px] truncate">
+                                {p.note || '—'}
+                              </td>
+                              <td className="py-2.5 px-3 text-gray-500 whitespace-nowrap">
+                                {p.recordedBy?.name || '—'}
+                              </td>
+                              <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                                {(isAdmin || (p.recordedBy?._id || p.recordedBy) === user?._id) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePayment(p._id)}
+                                    disabled={deletingPaymentId === p._id}
+                                    className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    title="Delete payment"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Customer Details */}
             <div className="card">
               <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
@@ -302,6 +577,7 @@ export default function LeadDetail() {
                   { icon: CreditCard, label: 'Aadhaar Number', value: lead.aadhaarNumber || '—' },
                   { icon: MapPin, label: 'City', value: lead.city || '—' },
                   { icon: MapPin, label: 'Address', value: lead.address || '—' },
+                  { icon: IndianRupee, label: 'Plant Cost', value: plantCost ? `₹${plantCost.toLocaleString('en-IN')}` : '—' },
                   { icon: User, label: 'System Size', value: lead.systemSize || '—' },
                   { icon: User, label: 'Source', value: lead.source || 'Manual' },
                   { icon: User, label: 'Created By', value: lead.createdBy?.name || '—' },
@@ -500,7 +776,7 @@ export default function LeadDetail() {
             </div>
           </div>
 
-          {/* Right - Stage History */}
+          {/* Right Column - Stage History & Assignee */}
           <div className="space-y-5">
             <div className="card">
               <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
@@ -572,6 +848,182 @@ export default function LeadDetail() {
               className="max-w-full max-h-full rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        )}
+
+        {/* Record Payment Modal for Admin & Employees */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                    <Banknote className="w-5 h-5 text-emerald-600" /> Record Payment
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Customer: <span className="font-semibold text-gray-800">{lead.name}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddPayment} className="space-y-4">
+                <div>
+                  <label className="label">Payment Amount (₹) *</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                    <input
+                      className="input pl-8 font-semibold text-base"
+                      type="number"
+                      min="1"
+                      required
+                      placeholder="e.g. 50000"
+                      value={payAmount}
+                      onChange={e => setPayAmount(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  {remainingBalance > 0 && (
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Current balance pending: <span className="font-bold text-amber-700">₹{remainingBalance.toLocaleString('en-IN')}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="label">Payment Method *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPayMethod('cash')}
+                      className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs transition-all ${
+                        payMethod === 'cash'
+                          ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Banknote className="w-4 h-4" />
+                      <span>Cash</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayMethod('account')}
+                      className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs transition-all ${
+                        payMethod === 'account'
+                          ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>Bank Account</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Payment Date</label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={payDate}
+                    onChange={e => setPayDate(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Note / Reference (optional)</label>
+                  <input
+                    className="input"
+                    placeholder="e.g. Advance token, Cheque #123, UPI Txn ID"
+                    value={payNote}
+                    onChange={e => setPayNote(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    className="btn-secondary flex-1 justify-center"
+                    onClick={() => setShowPaymentModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1 justify-center gap-2"
+                    disabled={submittingPayment}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{submittingPayment ? 'Recording...' : 'Save Payment'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Plant Cost Modal */}
+        {showCostModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-orange-500" /> Set / Update Plant Cost
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCostModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdatePlantCost} className="space-y-4">
+                <div>
+                  <label className="label">Total Plant Cost (₹) *</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                    <input
+                      className="input pl-8 font-semibold text-base"
+                      type="number"
+                      min="0"
+                      required
+                      placeholder="e.g. 250000"
+                      value={editCost}
+                      onChange={e => setEditCost(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    System Size: <span className="font-semibold text-gray-700">{lead.systemSize || 'Not specified'}</span>
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    className="btn-secondary flex-1 justify-center"
+                    onClick={() => setShowCostModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1 justify-center gap-2"
+                    disabled={updatingCost}
+                  >
+                    <span>{updatingCost ? 'Saving...' : 'Save Plant Cost'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

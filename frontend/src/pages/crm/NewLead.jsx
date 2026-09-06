@@ -38,6 +38,7 @@ export default function NewLead() {
     city: '',
     requirements: '',
     systemSize: '',
+    plantCost: '',
     source: 'Manual',
     assignedTo: '',
   });
@@ -306,6 +307,17 @@ export default function NewLead() {
                   />
                 </div>
                 <div>
+                  <label className="label">Total Plant Cost (₹)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    value={form.plantCost}
+                    onChange={e => f('plantCost', e.target.value)}
+                    placeholder="e.g. 250000"
+                  />
+                </div>
+                <div className="md:col-span-2">
                   <label className="label">Lead Source</label>
                   <select
                     className="input"

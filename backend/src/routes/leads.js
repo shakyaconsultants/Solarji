@@ -69,12 +69,13 @@ const LEAD_DETAIL_FIELDS = [
   { path: 'stageHistory.assignedTo', select: 'name email' },
   { path: 'stageHistory.movedBy', select: 'name email' },
   { path: 'notes.addedBy', select: 'name email' },
+  { path: 'payments.recordedBy', select: 'name email' },
 ];
 
 // Public route - create lead from quotation generator
 router.post('/public', async (req, res) => {
   try {
-    const { name, phone, email, address, city, requirements, systemSize, source } = req.body;
+    const { name, phone, email, address, city, requirements, systemSize, source, plantCost } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ message: 'Name and phone number are required' });
     }
@@ -86,6 +87,7 @@ router.post('/public', async (req, res) => {
 
     const lead = await Lead.create({
       name, phone, email, address, city, requirements, systemSize,
+      plantCost: Math.max(0, Number(plantCost) || 0),
       source: source || 'Quotation Generator',
       assignedTo: admin._id,
       createdBy: admin._id,
@@ -125,6 +127,218 @@ router.get('/', protect, async (req, res) => {
     const totalPages = Math.max(1, Math.ceil(total / limit));
     res.json({
       leads,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// GET /leads/first-paid - List all customers who have paid first amount (earliest first-paid person at top)
+router.get('/first-paid', protect, async (req, res) => {
+  try {
+    const baseFilter = buildLeadFilter(req);
+    const matchQuery = {
+      ...baseFilter,
+      'payments.0': { $exists: true },
+    };
+
+    if (req.query.stage) {
+      matchQuery.stage = req.query.stage;
+    }
+    if (req.query.method) {
+      matchQuery['payments.method'] = req.query.method;
+    }
+
+    const search = (req.query.search || '').trim();
+    if (search) {
+      const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      matchQuery.$or = [
+        { name: regex },
+        { phone: regex },
+        { city: regex },
+        { email: regex },
+      ];
+    }
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const pipeline = [
+      { $match: matchQuery },
+      {
+        $addFields: {
+          firstPaymentDate: { $min: '$payments.date' },
+          totalPaidAmount: { $sum: '$payments.amount' },
+        },
+      },
+      { $sort: { firstPaymentDate: 1, createdAt: 1 } },
+      {
+        $facet: {
+          paginatedResults: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+          overallStats: [
+            {
+              $group: {
+                _id: null,
+                totalPlantCost: { $sum: { $ifNull: ['$plantCost', 0] } },
+                totalPaid: { $sum: '$totalPaidAmount' },
+                count: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    const [aggResult] = await Lead.aggregate(pipeline);
+    const rawLeads = aggResult?.paginatedResults || [];
+    const total = aggResult?.totalCount?.[0]?.count || 0;
+    const stats = aggResult?.overallStats?.[0] || { totalPlantCost: 0, totalPaid: 0, count: 0 };
+
+    const leadIds = rawLeads.map((l) => l._id);
+    const populatedLeads = await Lead.find({ _id: { $in: leadIds } })
+      .populate(LEAD_DETAIL_FIELDS);
+
+    const leadMap = new Map(populatedLeads.map((l) => [String(l._id), l]));
+    const leads = leadIds.map((id) => leadMap.get(String(id))).filter(Boolean);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    res.json({
+      leads,
+      stats: {
+        totalCustomers: stats.count || total,
+        totalPlantCost: stats.totalPlantCost || 0,
+        totalPaid: stats.totalPaid || 0,
+        totalBalanceLeft: Math.max(0, (stats.totalPlantCost || 0) - (stats.totalPaid || 0)),
+      },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// GET /leads/pending-balance - List all customers whose amount is left (Total Plant Cost - First Paid / Total Paid > 0)
+router.get('/pending-balance', protect, async (req, res) => {
+  try {
+    const baseFilter = buildLeadFilter(req);
+    const matchQuery = {
+      ...baseFilter,
+      plantCost: { $gt: 0 },
+    };
+
+    if (req.query.stage) {
+      matchQuery.stage = req.query.stage;
+    }
+
+    const search = (req.query.search || '').trim();
+    if (search) {
+      const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      matchQuery.$or = [
+        { name: regex },
+        { phone: regex },
+        { city: regex },
+        { email: regex },
+      ];
+    }
+
+    const filterType = req.query.type || 'all'; // 'all' | 'first-paid' | 'unpaid'
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const pipeline = [
+      { $match: matchQuery },
+      {
+        $addFields: {
+          firstPaymentDate: { $min: '$payments.date' },
+          totalPaidAmount: { $sum: '$payments.amount' },
+          firstPaymentAmount: {
+            $ifNull: [{ $arrayElemAt: ['$payments.amount', 0] }, 0],
+          },
+        },
+      },
+      {
+        $addFields: {
+          remainingBalance: {
+            $max: [0, { $subtract: [{ $ifNull: ['$plantCost', 0] }, '$totalPaidAmount'] }],
+          },
+          balanceAfterFirstPayment: {
+            $max: [0, { $subtract: [{ $ifNull: ['$plantCost', 0] }, '$firstPaymentAmount'] }],
+          },
+        },
+      },
+      {
+        $match: filterType === 'first-paid'
+          ? { 'payments.0': { $exists: true }, remainingBalance: { $gt: 0 } }
+          : filterType === 'unpaid'
+          ? { 'payments.0': { $exists: false } }
+          : {
+              $or: [
+                { remainingBalance: { $gt: 0 } },
+                { balanceAfterFirstPayment: { $gt: 0 } },
+              ],
+            },
+      },
+      { $sort: { remainingBalance: -1, createdAt: -1 } },
+      {
+        $facet: {
+          paginatedResults: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+          overallStats: [
+            {
+              $group: {
+                _id: null,
+                totalPlantCost: { $sum: { $ifNull: ['$plantCost', 0] } },
+                totalPaid: { $sum: '$totalPaidAmount' },
+                totalPendingBalance: { $sum: '$remainingBalance' },
+                count: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    const [aggResult] = await Lead.aggregate(pipeline);
+    const rawLeads = aggResult?.paginatedResults || [];
+    const total = aggResult?.totalCount?.[0]?.count || 0;
+    const stats = aggResult?.overallStats?.[0] || {
+      totalPlantCost: 0, totalPaid: 0, totalPendingBalance: 0, count: 0,
+    };
+
+    const leadIds = rawLeads.map((l) => l._id);
+    const populatedLeads = await Lead.find({ _id: { $in: leadIds } })
+      .populate(LEAD_DETAIL_FIELDS);
+
+    const leadMap = new Map(populatedLeads.map((l) => [String(l._id), l]));
+    const leads = leadIds.map((id) => leadMap.get(String(id))).filter(Boolean);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    res.json({
+      leads,
+      stats: {
+        totalPendingCustomers: stats.count || total,
+        totalPlantCost: stats.totalPlantCost || 0,
+        totalCollected: stats.totalPaid || 0,
+        totalPendingBalance: stats.totalPendingBalance || 0,
+      },
       pagination: {
         page,
         limit,
@@ -248,14 +462,19 @@ router.get('/:id', protect, async (req, res) => {
 
 router.post('/', protect, upload.fields(docFields), async (req, res) => {
   try {
-    const { name, phone, email, panNumber, aadhaarNumber, address, city, requirements, systemSize, source, assignedTo } = req.body;
+    const {
+      name, phone, email, panNumber, aadhaarNumber, address, city,
+      requirements, systemSize, source, assignedTo, plantCost,
+    } = req.body;
     
     if (!name || !phone) {
       return res.status(400).json({ message: 'Name and phone number are required' });
     }
 
     const lead = new Lead({
-      name, phone, email, panNumber, aadhaarNumber, address, city, requirements, systemSize, source,
+      name, phone, email, panNumber, aadhaarNumber, address, city,
+      requirements, systemSize, source,
+      plantCost: Math.max(0, Number(plantCost) || 0),
       assignedTo: assignedTo || req.user._id,
       createdBy: req.user._id,
       stageHistory: [{
@@ -276,6 +495,85 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
     dashCache.invalidateCrm();
     dashCache.invalidateAdmin();
     res.status(201).json(lead);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// POST /leads/:id/payments - Record a payment
+router.post('/:id/payments', protect, async (req, res) => {
+  try {
+    const { amount, method, date, note } = req.body;
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ message: 'A valid payment amount greater than 0 is required' });
+    }
+
+    const payMethod = method === 'account' ? 'account' : 'cash';
+    const payDate = date ? new Date(date) : new Date();
+
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+    lead.payments.push({
+      amount: numAmount,
+      method: payMethod,
+      date: payDate,
+      note: (note || '').trim(),
+      recordedBy: req.user._id,
+    });
+
+    await lead.save();
+    await lead.populate(LEAD_DETAIL_FIELDS);
+    dashCache.invalidateCrm();
+    dashCache.invalidateAdmin();
+    res.status(201).json(lead);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// DELETE /leads/:id/payments/:paymentId - Delete a recorded payment
+router.delete('/:id/payments/:paymentId', protect, async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+    const payment = lead.payments.id(req.params.paymentId);
+    if (!payment) return res.status(404).json({ message: 'Payment record not found' });
+
+    if (req.user.role !== 'admin' && String(payment.recordedBy) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to delete this payment record' });
+    }
+
+    payment.deleteOne();
+    await lead.save();
+    await lead.populate(LEAD_DETAIL_FIELDS);
+    dashCache.invalidateCrm();
+    dashCache.invalidateAdmin();
+    res.json(lead);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// PUT /leads/:id/plant-cost - Update plant cost directly
+router.put('/:id/plant-cost', protect, async (req, res) => {
+  try {
+    const { plantCost } = req.body;
+    const cost = Math.max(0, Number(plantCost) || 0);
+
+    const lead = await Lead.findByIdAndUpdate(
+      req.params.id,
+      { plantCost: cost },
+      { new: true }
+    ).populate(LEAD_DETAIL_FIELDS);
+
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+    dashCache.invalidateCrm();
+    dashCache.invalidateAdmin();
+    res.json(lead);
   } catch (err) {
     sendError(res, err);
   }

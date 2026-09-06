@@ -3,17 +3,20 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Target, Package, ShoppingCart, FileText,
   LogOut, Settings, PlusCircle, BarChart3, Home, Layers, ChevronRight, X, AlertCircle, Clock,
+  CreditCard, Receipt,
 } from 'lucide-react';
 import logo from '../assets/solarji logo.jpeg';
 import { roleLabel } from '../utils/roles';
 
 const CRM_LINKS = [
-  { to:'/crm',           label:'Dashboard',      icon:LayoutDashboard, end:true },
-  { to:'/crm/leads',     label:'All Leads',       icon:Target },
-  { to:'/crm/leads/new', label:'New Lead',         icon:PlusCircle },
-  { to:'/crm/complaints', label:'Complaints',     icon:AlertCircle },
-  { to:'/crm/orders',     label:'Shop Orders',     icon:ShoppingCart },
-  { to:'/crm/attendance', label:'Attendance',     icon:Clock },
+  { to:'/crm',                 label:'Dashboard',        icon:LayoutDashboard, end:true },
+  { to:'/crm/leads',           label:'All Leads',         icon:Target },
+  { to:'/crm/first-paid',      label:'First Paid',        icon:CreditCard },
+  { to:'/crm/pending-balance', label:'Pending Balance',   icon:Receipt },
+  { to:'/crm/leads/new',       label:'New Lead',          icon:PlusCircle },
+  { to:'/crm/complaints',      label:'Complaints',        icon:AlertCircle },
+  { to:'/crm/orders',          label:'Shop Orders',       icon:ShoppingCart },
+  { to:'/crm/attendance',      label:'Attendance',        icon:Clock },
 ];
 const CRM_TEAM   = [{ to:'/crm/team', label:'Team', icon:Users }];
 const CRM_ADMIN  = [{ to:'/crm/users', label:'User Management', icon:Users }];

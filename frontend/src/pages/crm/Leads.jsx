@@ -267,6 +267,7 @@ export default function Leads() {
                       <th className="text-left py-3 px-3 font-semibold text-gray-600">Customer</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-600">Phone</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-600">City</th>
+                      <th className="text-left py-3 px-3 font-semibold text-gray-600">Plant Cost</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-600">Stage</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-600">Assigned To</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-600">Created By</th>
@@ -299,6 +300,18 @@ export default function Leads() {
                           <td className="py-3 px-3 font-medium text-gray-800">{lead.name}</td>
                           <td className="py-3 px-3 text-gray-600">{lead.phone}</td>
                           <td className="py-3 px-3 text-gray-500">{lead.city || '—'}</td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            {lead.plantCost > 0 ? (
+                              <div>
+                                <span className="font-semibold text-gray-800">₹{Number(lead.plantCost).toLocaleString('en-IN')}</span>
+                                {lead.totalPaid > 0 && (
+                                  <p className="text-[10px] text-emerald-600 font-bold">₹{Number(lead.totalPaid).toLocaleString('en-IN')} paid</p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
+                          </td>
                           <td className="py-3 px-3">
                             <span className={`badge ${stageColors[lead.stage] || 'bg-gray-100 text-gray-600'}`}>{lead.stage}</span>
                           </td>
