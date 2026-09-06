@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CreditCard, Search, ArrowRight, Wallet, CheckCircle2,
-  Calendar, Phone, MapPin, User, Banknote, IndianRupee, Eye, RefreshCw, X
+  Calendar, Phone, MapPin, User, Banknote, IndianRupee, Eye, RefreshCw, X, Printer
 } from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
 import PaginationBar from '../../components/PaginationBar';
+import CustomerReceiptModal from '../../components/CustomerReceiptModal';
+import { printCustomerListReport } from '../../utils/printReceipt';
 import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 
@@ -47,6 +49,7 @@ export default function FirstPaid() {
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const fetchId = useRef(0);
+  const [receiptLead, setReceiptLead] = useState(null);
 
   // Quick Payment Modal for Admin and Employees
   const [selectedLeadForPay, setSelectedLeadForPay] = useState(null);
@@ -142,15 +145,27 @@ export default function FirstPaid() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading}
-            className="btn-secondary self-start sm:self-auto gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-orange-500' : ''}`} />
-            <span>Refresh</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => printCustomerListReport(leads, 'First-Paid Customers Report', stats)}
+              disabled={loading || leads.length === 0}
+              className="btn-secondary gap-1.5"
+              title="Print or Save list as PDF"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print Report</span>
+            </button>
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={loading}
+              className="btn-secondary gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-orange-500' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
         {/* Stats KPI Cards */}
@@ -374,6 +389,15 @@ export default function FirstPaid() {
                             </button>
                             <button
                               type="button"
+                              onClick={() => setReceiptLead(l)}
+                              className="btn-secondary py-1.5 px-2.5 text-xs inline-flex items-center gap-1 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200"
+                              title="Print or Download customer payment receipt"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Print</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => navigate(`/crm/leads/${l._id}`)}
                               className="btn-secondary py-1.5 px-2.5 text-xs inline-flex items-center gap-1 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200"
                             >
@@ -512,6 +536,14 @@ export default function FirstPaid() {
               </form>
             </div>
           </div>
+        )}
+
+        {/* Receipt Preview & Print Modal */}
+        {receiptLead && (
+          <CustomerReceiptModal
+            lead={receiptLead}
+            onClose={() => setReceiptLead(null)}
+          />
         )}
       </div>
     </Layout>

@@ -686,7 +686,7 @@ export default function QuotationGenerator() {
                 12 A Rajendra Nagar Naubasta Kanpur 208021
               </p>
               <p style={{ fontSize:'.8rem', color:'#9ca3af', marginBottom:'2rem' }}>
-                +91 72330 50533 · info@solarji.com
+                +91 72330 50533 · info@solarji.co.in
               </p>
 
               <div style={{ background:ORANGE, color:WHITE, borderRadius:16,
@@ -1052,7 +1052,7 @@ export default function QuotationGenerator() {
                   Thanks &amp; Regards — SolarJi
                 </p>
                 <p style={{ fontSize:'.75rem', color:'#9ca3af' }}>
-                  +91 72330 50533 · info@solarji.com · Kanpur, Uttar Pradesh &nbsp;|&nbsp; देश चलेगा सूरज से ☀️
+                  +91 72330 50533 · info@solarji.co.in · Kanpur, Uttar Pradesh &nbsp;|&nbsp; देश चलेगा सूरज से ☀️
                 </p>
               </div>
             </div>

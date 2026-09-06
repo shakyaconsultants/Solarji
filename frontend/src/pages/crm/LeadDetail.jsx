@@ -4,10 +4,12 @@ import {
   ArrowLeft, Edit2, MessageSquare, GitBranch, User, Phone, Mail, MapPin,
   RefreshCw, Star, Clock, Calendar, ImagePlus, X, Trash2,
   FileText, CreditCard, Building, Receipt, Camera, Upload, ExternalLink, Eye,
-  IndianRupee, Plus, CheckCircle2, Wallet, Banknote, AlertCircle
+  IndianRupee, Plus, CheckCircle2, Wallet, Banknote, AlertCircle, Printer
 } from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
+import CustomerReceiptModal from '../../components/CustomerReceiptModal';
+import { printCustomerReceipt } from '../../utils/printReceipt';
 import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 import { useAuth } from '../../context/AuthContext';
@@ -111,6 +113,10 @@ export default function LeadDetail() {
   const [editCost, setEditCost] = useState('');
   const [updatingCost, setUpdatingCost] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState(null);
+
+  // Receipt Modal State
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptModalPayment, setReceiptModalPayment] = useState(null);
 
   const handleUploadDoc = async (docId, file) => {
     if (!file) return;
@@ -365,6 +371,17 @@ export default function LeadDetail() {
                 </span>
               );
             })()}
+            <button
+              type="button"
+              onClick={() => {
+                setReceiptModalPayment(null);
+                setShowReceiptModal(true);
+              }}
+              className="btn-secondary gap-2"
+              title="Print or Save Payment Statement as PDF"
+            >
+              <Printer className="w-4 h-4" /> Print Statement
+            </button>
             <button onClick={() => setShowMoveModal(true)} className="btn-primary gap-2">
               <RefreshCw className="w-4 h-4" /> Move Stage
             </button>
@@ -393,6 +410,18 @@ export default function LeadDetail() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReceiptModalPayment(null);
+                      setShowReceiptModal(true);
+                    }}
+                    className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 hover:border-orange-300"
+                    title="Print full statement / receipt"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print Receipt</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -541,17 +570,30 @@ export default function LeadDetail() {
                                 {p.recordedBy?.name || '—'}
                               </td>
                               <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                                {(isAdmin || (p.recordedBy?._id || p.recordedBy) === user?._id) && (
+                                <div className="inline-flex items-center gap-1.5 justify-end">
                                   <button
                                     type="button"
-                                    onClick={() => handleDeletePayment(p._id)}
-                                    disabled={deletingPaymentId === p._id}
-                                    className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                    title="Delete payment"
+                                    onClick={() => {
+                                      setReceiptModalPayment(p);
+                                      setShowReceiptModal(true);
+                                    }}
+                                    className="p-1 rounded text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                                    title="Print receipt for this installment"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Printer className="w-3.5 h-3.5" />
                                   </button>
-                                )}
+                                  {(isAdmin || (p.recordedBy?._id || p.recordedBy) === user?._id) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeletePayment(p._id)}
+                                      disabled={deletingPaymentId === p._id}
+                                      className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                      title="Delete payment"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1061,6 +1103,18 @@ export default function LeadDetail() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Customer Receipt & Statement Modal */}
+        {showReceiptModal && (
+          <CustomerReceiptModal
+            lead={lead}
+            singlePayment={receiptModalPayment}
+            onClose={() => {
+              setShowReceiptModal(false);
+              setReceiptModalPayment(null);
+            }}
+          />
         )}
       </div>
     </Layout>

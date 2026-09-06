@@ -7,7 +7,7 @@ export const COMPANY = {
   addressLines: ['12 A Rajendra Nagar Naubasta', 'Kanpur 208021'],
   address: '12 A Rajendra Nagar Naubasta Kanpur 208021',
   phones: ['+91 7233050533'],
-  email: 'info@solarji.com',
+  email: 'info@solarji.co.in',
 };
 
 export function emptyVoucherRow() {

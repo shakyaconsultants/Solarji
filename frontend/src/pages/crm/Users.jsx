@@ -265,7 +265,7 @@ export default function Users() {
                 </div>
                 <div>
                   <label className="label">Email *</label>
-                  <input className="input" type="email" required value={form.email} onChange={e => f('email', e.target.value)} placeholder="john@solarji.com" />
+                  <input className="input" type="email" required value={form.email} onChange={e => f('email', e.target.value)} placeholder="john@solarji.co.in" />
                 </div>
                 <div>
                   <label className="label">{editing ? 'New Password (leave blank to keep)' : 'Password *'}</label>
