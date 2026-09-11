@@ -17,6 +17,7 @@ const ALLOWED_MIME = new Set([
   'image/webp',
   'image/heic',
   'image/heif',
+  'application/pdf',
 ]);
 
 const memoryStorage = multer.memoryStorage();
@@ -35,39 +36,63 @@ const upload = multer({
   },
 });
 
-// Compresses with sharp (resize-to-fit + WebP), then streams to Cloudinary.
+// Compresses images with sharp (resize-to-fit + WebP), or streams raw documents (PDF) directly to Cloudinary.
 async function compressAndUpload(file, { folder = 'solarji/leads' } = {}) {
-  const compressed = await sharp(file.buffer, { failOn: 'none' })
-    .rotate() // honor EXIF orientation
-    .resize({
-      width: MAX_DIMENSION,
-      height: MAX_DIMENSION,
-      fit: 'inside',
-      withoutEnlargement: true,
-    })
-    .webp({ quality: COMPRESSION_QUALITY, effort: 4 })
-    .toBuffer();
+  const isImage = file.mimetype && file.mimetype.startsWith('image/');
 
+  if (isImage && file.mimetype !== 'image/svg+xml') {
+    const compressed = await sharp(file.buffer, { failOn: 'none' })
+      .rotate() // honor EXIF orientation
+      .resize({
+        width: MAX_DIMENSION,
+        height: MAX_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: COMPRESSION_QUALITY, effort: 4 })
+      .toBuffer();
+
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: 'image',
+          format: 'webp',
+        },
+        (err, result) => {
+          if (err) return reject(err);
+          resolve({
+            url: result.secure_url,
+            publicId: result.public_id,
+            width: result.width,
+            height: result.height,
+            bytes: result.bytes,
+            originalBytes: file.size,
+          });
+        },
+      );
+      streamifier.createReadStream(compressed).pipe(stream);
+    });
+  }
+
+  // Raw documents (PDF, etc.)
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
-        resource_type: 'image',
-        format: 'webp',
+        resource_type: 'auto',
       },
       (err, result) => {
         if (err) return reject(err);
         resolve({
           url: result.secure_url,
           publicId: result.public_id,
-          width: result.width,
-          height: result.height,
           bytes: result.bytes,
           originalBytes: file.size,
         });
       },
     );
-    streamifier.createReadStream(compressed).pipe(stream);
+    streamifier.createReadStream(file.buffer).pipe(stream);
   });
 }
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 const { protect, adminOnly, canViewAllLeads } = require('../middleware/auth');
@@ -29,19 +30,30 @@ async function processDocUploads(files, leadId) {
   for (const key of docKeys) {
     if (files[key] && files[key][0]) {
       const file = files[key][0];
-      if (isCloudinaryConfigured()) {
-        const uploaded = await compressAndUpload(file, { folder: `solarji/leads/${leadId}/documents` });
-        resultDocs[key] = {
-          url: uploaded.url,
-          publicId: uploaded.publicId,
-          originalName: file.originalname,
-        };
-      } else {
+      try {
+        if (isCloudinaryConfigured()) {
+          const uploaded = await compressAndUpload(file, { folder: `solarji/leads/${leadId}/documents` });
+          resultDocs[key] = {
+            url: uploaded.url,
+            publicId: uploaded.publicId,
+            originalName: file.originalname,
+          };
+        } else {
+          const b64 = file.buffer.toString('base64');
+          const mime = file.mimetype || 'image/jpeg';
+          resultDocs[key] = {
+            url: `data:${mime};base64,${b64}`,
+            publicId: `dev_${Date.now()}`,
+            originalName: file.originalname,
+          };
+        }
+      } catch (uploadErr) {
+        console.error(`Failed to upload ${key} to Cloudinary, falling back to base64:`, uploadErr);
         const b64 = file.buffer.toString('base64');
         const mime = file.mimetype || 'image/jpeg';
         resultDocs[key] = {
           url: `data:${mime};base64,${b64}`,
-          publicId: `dev_${Date.now()}`,
+          publicId: `fallback_${Date.now()}`,
           originalName: file.originalname,
         };
       }
@@ -467,19 +479,31 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
       requirements, systemSize, source, assignedTo, plantCost,
     } = req.body;
     
-    if (!name || !phone) {
+    if (!name || !name.trim() || !phone || !phone.trim()) {
       return res.status(400).json({ message: 'Name and phone number are required' });
     }
 
+    const finalAssignedTo = (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo))
+      ? assignedTo
+      : req.user._id;
+
     const lead = new Lead({
-      name, phone, email, panNumber, aadhaarNumber, address, city,
-      requirements, systemSize, source,
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email ? email.trim() : undefined,
+      panNumber: panNumber ? panNumber.trim() : undefined,
+      aadhaarNumber: aadhaarNumber ? aadhaarNumber.trim() : undefined,
+      address: address ? address.trim() : undefined,
+      city: city ? city.trim() : undefined,
+      requirements: requirements ? requirements.trim() : undefined,
+      systemSize: systemSize ? systemSize.trim() : undefined,
+      source: source || 'Manual',
       plantCost: Math.max(0, Number(plantCost) || 0),
-      assignedTo: assignedTo || req.user._id,
+      assignedTo: finalAssignedTo,
       createdBy: req.user._id,
       stageHistory: [{
         stage: 'Lead',
-        assignedTo: assignedTo || req.user._id,
+        assignedTo: finalAssignedTo,
         movedBy: req.user._id,
         note: 'Lead created',
         date: new Date(),

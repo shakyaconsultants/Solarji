@@ -33,14 +33,19 @@ function sendError(res, err, fallback = 'Something went wrong. Please try again.
     return res.status(status).json({ message: mongoMessage });
   }
 
+  if (err.name === 'MulterError' || err.code === 'LIMIT_FILE_SIZE' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({ message: err.message || 'File upload error. Please check file size and formats.' });
+  }
+
+  if (err.message && err.message.startsWith('Unsupported file type')) {
+    return res.status(400).json({ message: err.message });
+  }
+
   if (err.status && err.message) {
     return res.status(err.status).json({ message: err.message });
   }
 
-  const message = process.env.NODE_ENV === 'production'
-    ? fallback
-    : (err.message || fallback);
-
+  const message = err.message || fallback;
   return res.status(500).json({ message });
 }
 
