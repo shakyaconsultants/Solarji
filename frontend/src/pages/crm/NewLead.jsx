@@ -40,6 +40,7 @@ export default function NewLead() {
     systemSize: '',
     plantCost: '',
     source: 'Manual',
+    referralName: '',
     assignedTo: '',
   });
 
@@ -328,6 +329,16 @@ export default function NewLead() {
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="label">Referral Name (Optional)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={form.referralName}
+                    onChange={e => f('referralName', e.target.value)}
+                    placeholder="e.g. Person / Partner who referred"
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <label className="label">Requirements / Site Notes</label>

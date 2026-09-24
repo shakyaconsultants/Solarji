@@ -87,7 +87,7 @@ const LEAD_DETAIL_FIELDS = [
 // Public route - create lead from quotation generator
 router.post('/public', async (req, res) => {
   try {
-    const { name, phone, email, address, city, requirements, systemSize, source, plantCost } = req.body;
+    const { name, phone, email, address, city, requirements, systemSize, source, plantCost, referralName } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ message: 'Name and phone number are required' });
     }
@@ -97,17 +97,22 @@ router.post('/public', async (req, res) => {
       return res.status(500).json({ message: 'No active admin found in the system' });
     }
 
+    const trimmedRef = referralName ? String(referralName).trim() : '';
+
     const lead = await Lead.create({
       name, phone, email, address, city, requirements, systemSize,
+      referralName: trimmedRef,
       plantCost: Math.max(0, Number(plantCost) || 0),
-      source: source || 'Quotation Generator',
+      source: source || (trimmedRef ? `Quotation Generator (Ref: ${trimmedRef})` : 'Quotation Generator'),
       assignedTo: admin._id,
       createdBy: admin._id,
       stageHistory: [{
         stage: 'Lead',
         assignedTo: admin._id,
         movedBy: admin._id,
-        note: `Lead created from ${source || 'Quotation Generator'}`,
+        note: trimmedRef
+          ? `Lead created from ${source || 'Quotation Generator'} (Referral: ${trimmedRef})`
+          : `Lead created from ${source || 'Quotation Generator'}`,
         date: new Date(),
       }],
     });
@@ -476,7 +481,7 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
   try {
     const {
       name, phone, email, panNumber, aadhaarNumber, address, city,
-      requirements, systemSize, source, assignedTo, plantCost,
+      requirements, systemSize, source, assignedTo, plantCost, referralName,
     } = req.body;
     
     if (!name || !name.trim() || !phone || !phone.trim()) {
@@ -498,6 +503,7 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
       requirements: requirements ? requirements.trim() : undefined,
       systemSize: systemSize ? systemSize.trim() : undefined,
       source: source || 'Manual',
+      referralName: referralName ? referralName.trim() : undefined,
       plantCost: Math.max(0, Number(plantCost) || 0),
       assignedTo: finalAssignedTo,
       createdBy: req.user._id,
@@ -505,7 +511,7 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
         stage: 'Lead',
         assignedTo: finalAssignedTo,
         movedBy: req.user._id,
-        note: 'Lead created',
+        note: referralName?.trim() ? `Lead created (Referral: ${referralName.trim()})` : 'Lead created',
         date: new Date(),
       }],
     });

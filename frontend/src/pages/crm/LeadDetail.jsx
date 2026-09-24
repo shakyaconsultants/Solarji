@@ -622,6 +622,7 @@ export default function LeadDetail() {
                   { icon: IndianRupee, label: 'Plant Cost', value: plantCost ? `₹${plantCost.toLocaleString('en-IN')}` : '—' },
                   { icon: User, label: 'System Size', value: lead.systemSize || '—' },
                   { icon: User, label: 'Source', value: lead.source || 'Manual' },
+                  { icon: User, label: 'Referral Name', value: lead.referralName || '—' },
                   { icon: User, label: 'Created By', value: lead.createdBy?.name || '—' },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-2">

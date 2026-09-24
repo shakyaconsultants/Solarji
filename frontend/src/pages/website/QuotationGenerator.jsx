@@ -118,6 +118,7 @@ export default function QuotationGenerator() {
   const [cPhone, setCPhone] = useState('');
   const [cAddr,  setCAddr]  = useState('');
   const [cCity,  setCCity]  = useState('Kanpur');
+  const [cRef,   setCRef]   = useState('');
 
   /* system */
   const [cType, setCType] = useState('');       // residential | commercial
@@ -217,9 +218,10 @@ export default function QuotationGenerator() {
         phone: cPhone,
         address: cAddr,
         city: cCity,
-        requirements: `${kw} kWp ${sType} Solar system (${cType})`,
+        referralName: cRef,
+        requirements: `${kw} kWp ${sType} Solar system (${cType})${cRef ? ` | Referral: ${cRef}` : ''}`,
         systemSize: `${kw} kW`,
-        source: 'Quotation Generator'
+        source: cRef ? `Quotation Generator (Ref: ${cRef})` : 'Quotation Generator'
       });
       setStep(3);
     } catch (err) {
@@ -307,7 +309,7 @@ export default function QuotationGenerator() {
           {/* actions (step 3 only) */}
           <div style={{ display:'flex', gap:8 }}>
             {step === 3 && <>
-              <button onClick={() => { setStep(1); setCType(''); setSType('onGrid'); setKw(2); setBats(1); }}
+              <button onClick={() => { setStep(1); setCType(''); setSType('onGrid'); setKw(2); setBats(1); setCRef(''); }}
                 style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 12px', borderRadius:9,
                          border:'1.5px solid #e5e7eb', background:WHITE, color:'#6b7280',
                          fontSize:'.78rem', fontWeight:600, cursor:'pointer' }}>
@@ -357,6 +359,11 @@ export default function QuotationGenerator() {
                     Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)
                   </p>
                 )}
+              </div>
+              <div>
+                <Lbl>Referral Name (Optional)</Lbl>
+                <input className="input" value={cRef} onChange={e => setCRef(e.target.value)}
+                  placeholder="e.g. Referred by / Referral Person Name"/>
               </div>
               <div>
                 <Lbl>Installation Address</Lbl>
@@ -645,7 +652,7 @@ export default function QuotationGenerator() {
                   Quotation Ready — {qNo}
                 </p>
                 <p style={{ fontSize:'.78rem', color:'#9ca3af', marginTop:2 }}>
-                  {kw} kWp {sLabel} · {cType === 'residential' ? 'Residential' : 'Commercial'} · {cName}
+                  {kw} kWp {sLabel} · {cType === 'residential' ? 'Residential' : 'Commercial'} · {cName}{cRef ? ` · Ref: ${cRef}` : ''}
                 </p>
               </div>
               <div style={{ display:'flex', gap:8 }}>
@@ -710,7 +717,12 @@ export default function QuotationGenerator() {
               {cAddr && (
                 <p style={{ fontSize:'.85rem', color:'#9ca3af' }}>{cAddr}, {cCity} (Uttar Pradesh)</p>
               )}
-              <p style={{ fontSize:'.85rem', color:'#9ca3af', marginBottom:'1.5rem' }}>{cPhone}</p>
+              <p style={{ fontSize:'.85rem', color:'#9ca3af', marginBottom: cRef ? '0.5rem' : '1.5rem' }}>{cPhone}</p>
+              {cRef && (
+                <p style={{ fontSize:'.85rem', color:'#6b7280', marginBottom:'1.5rem' }}>
+                  Referral: <strong style={{ color: ORANGE }}>{cRef}</strong>
+                </p>
+              )}
 
               <div style={{ display:'inline-flex', gap:'2rem', flexWrap:'wrap',
                             justifyContent:'center', borderTop:'1px solid #f0f0f0', paddingTop:'1.25rem' }}>
@@ -718,6 +730,11 @@ export default function QuotationGenerator() {
                 <span style={{ fontSize:'.8rem', color:'#6b7280' }}>
                   Quote No: <strong style={{ color:ORANGE }}>{qNo}</strong>
                 </span>
+                {cRef && (
+                  <span style={{ fontSize:'.8rem', color:'#6b7280' }}>
+                    Referral: <strong style={{ color:ORANGE }}>{cRef}</strong>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -733,10 +750,20 @@ export default function QuotationGenerator() {
                     <p style={{ fontSize:'.85rem', color:'#6b7280' }}>{cAddr}, {cCity} (Uttar Pradesh)</p>
                   )}
                   <p style={{ fontSize:'.85rem', color:'#6b7280' }}>{cPhone}</p>
+                  {cRef && (
+                    <p style={{ fontSize:'.82rem', color:'#6b7280', marginTop:2 }}>
+                      Referral: <strong style={{ color: ORANGE }}>{cRef}</strong>
+                    </p>
+                  )}
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <p style={{ fontWeight:800, color:ORANGE }}>Quote No: {qNo}</p>
                   <p style={{ fontSize:'.85rem', color:'#6b7280' }}>Date: {qDate}</p>
+                  {cRef && (
+                    <p style={{ fontSize:'.82rem', color:'#6b7280' }}>
+                      Ref By: <strong style={{ color: ORANGE }}>{cRef}</strong>
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -33,6 +33,7 @@ const leadSchema = new mongoose.Schema({
   requirements: { type: String },
   systemSize: { type: String },
   source: { type: String, default: 'Manual' },
+  referralName: { type: String, trim: true },
   plantCost: { type: Number, default: 0, min: 0 },
   payments: [paymentSchema],
 
