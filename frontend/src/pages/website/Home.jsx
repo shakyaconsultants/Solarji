@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sun, Zap, Shield, Award, Phone, Mail, MapPin,
          ArrowRight, BarChart3, Package, CheckCircle, Star, Layers, Menu, X } from 'lucide-react';
+import ContactSection from '../../components/ContactSection';
 import logo from '../../assets/solarji logo.jpeg';
 
 const ORANGE = '#f7941d';
@@ -377,14 +378,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ══ CONTACT ══ */}
+      {/* ══ CONTACT & HELPDESK ══ */}
       <section id="contact" style={{ background:BLACK, padding:'6rem 0' }}>
         <div style={{ maxWidth:1200, margin:'0 auto', padding:'0 1.5rem' }}>
-          <div style={{ textAlign:'center', marginBottom:'3.5rem' }}>
+          <div style={{ textAlign:'center', marginBottom:'3rem' }}>
             <span style={{ display:'inline-block', padding:'5px 14px', borderRadius:99, background:'rgba(247,148,29,.1)', border:`1px solid rgba(247,148,29,.3)`, color:ORANGE, fontSize:'.72rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:'1rem' }}>Get In Touch</span>
-            <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.75rem)', fontWeight:900, color:WHITE, letterSpacing:'-.03em' }}>Contact Us</h2>
+            <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.75rem)', fontWeight:900, color:WHITE, letterSpacing:'-.03em' }}>Contact &amp; Helpdesk</h2>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:'1.25rem' }}>
+          
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:'1.25rem', marginBottom:'3.5rem' }}>
             {[
               { icon:Phone,  title:'Call Us',  lines:['+91 7233050533'] },
               { icon:Mail,   title:'Email Us', lines:['info@solarji.co.in'] },
@@ -402,6 +404,9 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          {/* Interactive Helpdesk Contact Form with EmailJS */}
+          <ContactSection />
         </div>
       </section>
 
