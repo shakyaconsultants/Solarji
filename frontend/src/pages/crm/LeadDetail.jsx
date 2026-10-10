@@ -4,7 +4,8 @@ import {
   ArrowLeft, Edit2, MessageSquare, GitBranch, User, Phone, Mail, MapPin,
   RefreshCw, Star, Clock, Calendar, ImagePlus, X, Trash2,
   FileText, CreditCard, Building, Receipt, Camera, Upload, ExternalLink, Eye,
-  IndianRupee, Plus, CheckCircle2, Wallet, Banknote, AlertCircle, Printer
+  IndianRupee, Plus, CheckCircle2, Wallet, Banknote, AlertCircle, Printer,
+  Sun, Zap, Layers, Package
 } from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
@@ -145,9 +146,33 @@ export default function LeadDetail() {
     };
   }, [noteImages]);
 
+  // Edit Customer Details Modal State
+  const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
+  const [customerForm, setCustomerForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    panNumber: '',
+    aadhaarNumber: '',
+    city: '',
+    address: '',
+    systemSize: '',
+    panel: '',
+    inverter: '',
+    structure: '',
+    otherMaterials: '',
+    referralName: '',
+    requirements: '',
+  });
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [stockItems, setStockItems] = useState([]);
+
   useEffect(() => {
     ensureLeadDetail(id);
     fetchAssignees();
+    api.get('/stock/public/items')
+      .then(res => setStockItems(res.data.items || []))
+      .catch(err => console.error('Could not fetch stock items:', err));
   }, [id, ensureLeadDetail, fetchAssignees]);
 
   useEffect(() => {
@@ -157,6 +182,46 @@ export default function LeadDetail() {
       setEditCost(lead.plantCost || '');
     }
   }, [lead]);
+
+  const handleOpenEditCustomer = () => {
+    if (!lead) return;
+    setCustomerForm({
+      name: lead.name || '',
+      phone: lead.phone || '',
+      email: lead.email || '',
+      panNumber: lead.panNumber || '',
+      aadhaarNumber: lead.aadhaarNumber || '',
+      city: lead.city || '',
+      address: lead.address || '',
+      systemSize: lead.systemSize || '',
+      panel: lead.panel || '',
+      inverter: lead.inverter || '',
+      structure: lead.structure || '',
+      otherMaterials: lead.otherMaterials || '',
+      referralName: lead.referralName || '',
+      requirements: lead.requirements || '',
+    });
+    setShowEditCustomerModal(true);
+  };
+
+  const handleSaveCustomerDetails = async (e) => {
+    e.preventDefault();
+    if (!customerForm.name.trim() || !customerForm.phone.trim()) {
+      return toast.error('Name and Phone are required');
+    }
+    setSavingCustomer(true);
+    try {
+      const res = await api.put(`/leads/${id}`, customerForm);
+      upsertLead(res.data);
+      await refreshLeadDetail(id);
+      setShowEditCustomerModal(false);
+      toast.success('Customer & System details updated successfully!');
+    } catch (err) {
+      showApiError(err, 'Could not update customer details.');
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
 
   // Payment handlers
   const handleAddPayment = async (e) => {
@@ -605,11 +670,105 @@ export default function LeadDetail() {
               </div>
             </div>
 
-            {/* Customer Details */}
+            {/* Customer & System Details */}
             <div className="card">
-              <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                <User className="w-4 h-4 text-solar-500" /> Customer Details
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <User className="w-4 h-4 text-orange-500" /> Customer & System Details
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleOpenEditCustomer}
+                  className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5 hover:border-orange-300"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit Details</span>
+                </button>
+              </div>
+
+              {/* Equipment Highlight Box */}
+              {(() => {
+                const hasEquipment = Boolean(lead.panel || lead.inverter || lead.structure || lead.otherMaterials);
+                return (
+                  <div className="mb-4 bg-orange-50/60 border border-orange-200/80 rounded-xl p-3.5">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sun className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Solar System & Equipment Specifications</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleOpenEditCustomer}
+                        className="text-[11px] font-semibold text-orange-700 hover:text-orange-900 flex items-center gap-1 underline underline-offset-2"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>{hasEquipment ? 'Edit Materials' : '+ Add Materials Anytime'}</span>
+                      </button>
+                    </div>
+
+                    {!hasEquipment && (
+                      <div className="bg-white/80 border border-orange-200/60 rounded-lg p-3 text-xs text-orange-900 flex items-center justify-between gap-3 mb-2.5">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                          <span>Materials not specified yet. You can add panels, inverters, structures, or BOS equipment anytime.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleOpenEditCustomer}
+                          className="btn-primary py-1 px-2.5 text-xs whitespace-nowrap"
+                        >
+                          + Add Materials
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-orange-100 shadow-2xs">
+                        <div className="flex items-center gap-1 text-orange-600 mb-0.5">
+                          <Zap className="w-3 h-3" />
+                          <span className="text-[10px] font-bold uppercase">Capacity</span>
+                        </div>
+                        <p className="font-bold text-gray-900 truncate">{lead.systemSize || 'Standard'}</p>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-lg border border-orange-100 shadow-2xs">
+                        <div className="flex items-center gap-1 text-orange-600 mb-0.5">
+                          <Sun className="w-3 h-3" />
+                          <span className="text-[10px] font-bold uppercase">Solar Panel</span>
+                        </div>
+                        <p className="font-bold text-gray-900 truncate" title={lead.panel || 'Not specified'}>{lead.panel || '—'}</p>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-lg border border-orange-100 shadow-2xs">
+                        <div className="flex items-center gap-1 text-orange-600 mb-0.5">
+                          <Zap className="w-3 h-3" />
+                          <span className="text-[10px] font-bold uppercase">Inverter</span>
+                        </div>
+                        <p className="font-bold text-gray-900 truncate" title={lead.inverter || 'Not specified'}>{lead.inverter || '—'}</p>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-lg border border-orange-100 shadow-2xs">
+                        <div className="flex items-center gap-1 text-orange-600 mb-0.5">
+                          <Layers className="w-3 h-3" />
+                          <span className="text-[10px] font-bold uppercase">Structure</span>
+                        </div>
+                        <p className="font-bold text-gray-900 truncate" title={lead.structure || 'Not specified'}>{lead.structure || '—'}</p>
+                      </div>
+                    </div>
+
+                    {lead.otherMaterials && (
+                      <div className="mt-2.5 bg-white p-2.5 rounded-lg border border-orange-100 shadow-2xs text-xs flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Package className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+                          <span className="text-[10px] font-bold uppercase text-orange-700 flex-shrink-0">Other Materials & BOS:</span>
+                          <span className="text-gray-800 font-medium truncate">{lead.otherMaterials}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="grid md:grid-cols-2 gap-4 text-sm">
                 {[
                   { icon: User, label: 'Name', value: lead.name },
@@ -620,7 +779,6 @@ export default function LeadDetail() {
                   { icon: MapPin, label: 'City', value: lead.city || '—' },
                   { icon: MapPin, label: 'Address', value: lead.address || '—' },
                   { icon: IndianRupee, label: 'Plant Cost', value: plantCost ? `₹${plantCost.toLocaleString('en-IN')}` : '—' },
-                  { icon: User, label: 'System Size', value: lead.systemSize || '—' },
                   { icon: User, label: 'Source', value: lead.source || 'Manual' },
                   { icon: User, label: 'Referral Name', value: lead.referralName || '—' },
                   { icon: User, label: 'Created By', value: lead.createdBy?.name || '—' },
@@ -1102,6 +1260,224 @@ export default function LeadDetail() {
                   {moving ? 'Moving...' : 'Confirm Move'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Customer & System Details Modal */}
+        {showEditCustomerModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 my-auto animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-orange-500" /> Edit Customer & System Details
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowEditCustomerModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveCustomerDetails} className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="label">Customer Name *</label>
+                    <input
+                      className="input"
+                      required
+                      value={customerForm.name}
+                      onChange={e => setCustomerForm(p => ({ ...p, name: e.target.value }))}
+                      placeholder="e.g. Ramesh Kumar"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Phone Number *</label>
+                    <input
+                      className="input"
+                      required
+                      value={customerForm.phone}
+                      onChange={e => setCustomerForm(p => ({ ...p, phone: e.target.value }))}
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Email Address</label>
+                    <input
+                      className="input"
+                      type="email"
+                      value={customerForm.email}
+                      onChange={e => setCustomerForm(p => ({ ...p, email: e.target.value }))}
+                      placeholder="ramesh@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">City</label>
+                    <input
+                      className="input"
+                      value={customerForm.city}
+                      onChange={e => setCustomerForm(p => ({ ...p, city: e.target.value }))}
+                      placeholder="Kanpur"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">PAN Number</label>
+                    <input
+                      className="input uppercase"
+                      value={customerForm.panNumber}
+                      onChange={e => setCustomerForm(p => ({ ...p, panNumber: e.target.value.toUpperCase() }))}
+                      placeholder="ABCDE1234F"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Aadhaar Number</label>
+                    <input
+                      className="input"
+                      value={customerForm.aadhaarNumber}
+                      onChange={e => setCustomerForm(p => ({ ...p, aadhaarNumber: e.target.value }))}
+                      placeholder="1234 5678 9012"
+                      maxLength={14}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="label">Full Address</label>
+                    <input
+                      className="input"
+                      value={customerForm.address}
+                      onChange={e => setCustomerForm(p => ({ ...p, address: e.target.value }))}
+                      placeholder="House No., Street, Landmark"
+                    />
+                  </div>
+                </div>
+
+                {/* Equipment & System Specifications */}
+                <div className="bg-orange-50/50 border border-orange-200 rounded-xl p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-xs text-orange-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sun className="w-3.5 h-3.5 text-orange-600" />
+                      <span>Solar System & Equipment Specifications</span>
+                    </h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      Optional — Edit Anytime
+                    </span>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-[11px]">System Size / Capacity</label>
+                      <input
+                        className="input bg-white"
+                        value={customerForm.systemSize}
+                        onChange={e => setCustomerForm(p => ({ ...p, systemSize: e.target.value }))}
+                        placeholder="e.g. 3 kW, 5 kW"
+                      />
+                    </div>
+                    <div>
+                      <label className="label text-[11px]">Solar Panel Model</label>
+                      <input
+                        className="input bg-white"
+                        list="modalPanelList"
+                        value={customerForm.panel}
+                        onChange={e => setCustomerForm(p => ({ ...p, panel: e.target.value }))}
+                        placeholder="e.g. Adani 550W Mono PERC"
+                      />
+                      <datalist id="modalPanelList">
+                        {stockItems.filter(i => i.category === 'Solar Panel').map(i => (
+                          <option key={i._id} value={i.name} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div>
+                      <label className="label text-[11px]">Inverter Model</label>
+                      <input
+                        className="input bg-white"
+                        list="modalInverterList"
+                        value={customerForm.inverter}
+                        onChange={e => setCustomerForm(p => ({ ...p, inverter: e.target.value }))}
+                        placeholder="e.g. Solis 5kW On-Grid Inverter"
+                      />
+                      <datalist id="modalInverterList">
+                        {stockItems.filter(i => i.category === 'Inverter').map(i => (
+                          <option key={i._id} value={i.name} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div>
+                      <label className="label text-[11px]">Mounting Structure Type</label>
+                      <input
+                        className="input bg-white"
+                        list="modalStructureList"
+                        value={customerForm.structure}
+                        onChange={e => setCustomerForm(p => ({ ...p, structure: e.target.value }))}
+                        placeholder="e.g. GI High-Rise Elevated Structure"
+                      />
+                      <datalist id="modalStructureList">
+                        {stockItems.filter(i => i.category === 'Structure').map(i => (
+                          <option key={i._id} value={i.name} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="label text-[11px] flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Package className="w-3.5 h-3.5 text-gray-500" />
+                          Other Materials & BOS
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-normal">Optional</span>
+                      </label>
+                      <input
+                        className="input bg-white"
+                        value={customerForm.otherMaterials}
+                        onChange={e => setCustomerForm(p => ({ ...p, otherMaterials: e.target.value }))}
+                        placeholder="e.g. Havells ACDB/DCDB, 4mm DC Cables, Earthing kit, Batteries"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">Cables, distribution boxes, protection devices, earthing, etc. Can be added or edited anytime.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3.5">
+                  <div className="sm:col-span-2">
+                    <label className="label">Referral Name</label>
+                    <input
+                      className="input"
+                      value={customerForm.referralName}
+                      onChange={e => setCustomerForm(p => ({ ...p, referralName: e.target.value }))}
+                      placeholder="Referral person / partner name"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="label">Requirements / Notes</label>
+                    <textarea
+                      className="input"
+                      rows={2}
+                      value={customerForm.requirements}
+                      onChange={e => setCustomerForm(p => ({ ...p, requirements: e.target.value }))}
+                      placeholder="Special requirements, rooftop details, etc."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    className="btn-secondary flex-1 justify-center"
+                    onClick={() => setShowEditCustomerModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1 justify-center gap-2"
+                    disabled={savingCustomer}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{savingCustomer ? 'Saving...' : 'Save Changes'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

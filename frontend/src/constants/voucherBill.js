@@ -18,10 +18,17 @@ export function createBillPadRows(count = BILL_PAD_ROWS) {
   return Array.from({ length: count }, emptyVoucherRow);
 }
 
+export function formatQty(value) {
+  if (value === '' || value == null) return '';
+  const n = Number(value);
+  if (Number.isNaN(n)) return '';
+  return Number(n.toFixed(4)).toString();
+}
+
 /** Pad item lines to fixed row count for bill print (filled rows first, then blanks). */
 export function buildBillLines(items, padRows = BILL_PAD_ROWS) {
   const filled = (items || []).map((item, index) => {
-    const qty = item.quantity ?? '';
+    const qty = item.quantity != null && item.quantity !== '' ? formatQty(item.quantity) : '';
     const rate = item.price ?? 0;
     const gst = item.gst ?? 0;
     const amount = item.total ?? (Number(qty) * Number(rate) * (1 + gst / 100));

@@ -7,24 +7,77 @@ import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 import { useAuth } from '../../context/AuthContext';
 import { useDataCache } from '../../context/DataCacheContext';
+import { formatQty } from '../../constants/voucherBill';
 
 const ORANGE = '#f7941d';
 const PAGE_SIZE = 20;
 
-function buildPrintHtml(items, now, isAdmin) {
+function buildPrintHtml(items, now, isAdmin, mode = 'sales') {
+  const isPurchaseMode = mode === 'purchase';
+  const isSalesMode = mode === 'sales';
+  const isAllMode = mode === 'all';
+
+  const title = isPurchaseMode
+    ? 'Stock Inventory — Purchase & Cost Valuation Report'
+    : isSalesMode
+    ? 'Stock Inventory — Sales & Retail Price Catalog'
+    : 'Stock Inventory — Master Inventory Report';
+
   const lowStock = items.filter(i => i.minQuantity > 0 && i.quantity <= i.minQuantity);
+
+  let totalCostValuation = 0;
+  let totalSalesValuation = 0;
+
   const rows = items.map((item, i) => {
     const isLow = item.minQuantity > 0 && item.quantity <= item.minQuantity;
+    const qty = Number(item.quantity) || 0;
+    const pPrice = Number(item.purchasePrice) || 0;
+    const sPrice = Number(item.sellPrice) || 0;
+    const costVal = qty * pPrice;
+    const salesVal = qty * sPrice;
+
+    totalCostValuation += costVal;
+    totalSalesValuation += salesVal;
+
+    if (isPurchaseMode) {
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${item.name}</strong>${item.description ? `<br /><span style="font-size: 10px; color: #888">${item.description}</span>` : ''}</td>
+          <td><span class="cat">${item.category}</span></td>
+          <td>${item.unit}</td>
+          <td class="${isLow ? 'low' : 'ok'}">${formatQty(item.quantity)}</td>
+          <td>₹${pPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+          <td style="font-weight: 700; color: #047857;">₹${costVal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+          <td>${formatQty(item.minQuantity)}</td>
+          <td class="${isLow ? 'low' : 'ok'}">${isLow ? '⚠ Low Stock' : '✓ OK'}</td>
+        </tr>`;
+    }
+
+    if (isSalesMode) {
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${item.name}</strong>${item.description ? `<br /><span style="font-size: 10px; color: #888">${item.description}</span>` : ''}</td>
+          <td><span class="cat">${item.category}</span></td>
+          <td>${item.unit}</td>
+          <td class="${isLow ? 'low' : 'ok'}">${formatQty(item.quantity)}</td>
+          <td>₹${sPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+          <td style="font-weight: 700; color: #ea580c;">₹${salesVal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+          <td class="${isLow ? 'low' : 'ok'}">${isLow ? '⚠ Low Stock' : '✓ In Stock'}</td>
+        </tr>`;
+    }
+
     return `
       <tr>
         <td>${i + 1}</td>
         <td><strong>${item.name}</strong>${item.description ? `<br /><span style="font-size: 10px; color: #888">${item.description}</span>` : ''}</td>
         <td><span class="cat">${item.category}</span></td>
         <td>${item.unit}</td>
-        ${isAdmin ? `<td>₹${item.purchasePrice?.toLocaleString('en-IN')}</td>` : ''}
-        <td>₹${item.sellPrice?.toLocaleString('en-IN')}</td>
-        <td class="${isLow ? 'low' : 'ok'}">${item.quantity}</td>
-        <td>${item.minQuantity}</td>
+        ${isAdmin ? `<td>₹${pPrice.toLocaleString('en-IN')}</td>` : ''}
+        <td>₹${sPrice.toLocaleString('en-IN')}</td>
+        <td class="${isLow ? 'low' : 'ok'}">${formatQty(item.quantity)}</td>
+        <td>${formatQty(item.minQuantity)}</td>
         <td class="${isLow ? 'low' : 'ok'}">${isLow ? '⚠ Low Stock' : '✓ OK'}</td>
       </tr>`;
   }).join('');
@@ -32,26 +85,46 @@ function buildPrintHtml(items, now, isAdmin) {
   return `
     <div class="header">
       <div>
-        <div class="brand">SolarJi</div>
-        <div style="font-size: 11px; color: #666; margin-top: 2px">Stock Inventory Report</div>
+        <div class="brand">Solar<span>Ji</span></div>
+        <div style="font-size: 11px; color: #666; margin-top: 2px">${title}</div>
       </div>
       <div style="text-align: right">
         <div style="font-size: 11px; color: #666">Generated: ${now}</div>
         <div style="font-size: 11px; color: #666">Total Items: ${items.length}</div>
       </div>
     </div>
+
+    <div style="display: flex; gap: 15px; margin-bottom: 14px; background: #f9fafb; padding: 10px 14px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 11.5px;">
+      <div><strong>Total Items:</strong> ${items.length}</div>
+      ${isPurchaseMode ? `<div><strong>Total Inventory Valuation at Cost:</strong> <span style="font-weight: 800; color: #047857;">₹${totalCostValuation.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>` : ''}
+      ${isSalesMode ? `<div><strong>Total Stock Retail Valuation:</strong> <span style="font-weight: 800; color: #ea580c;">₹${totalSalesValuation.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>` : ''}
+      <div><strong>Low Stock Items:</strong> ${lowStock.length}</div>
+    </div>
+
     <table>
       <thead>
         <tr>
           <th>#</th><th>Item Name</th><th>Category</th><th>Unit</th>
-          ${isAdmin ? '<th>Purchase Price</th>' : ''}<th>Sell Price</th><th>Qty In Stock</th><th>Min Qty</th><th>Status</th>
+          ${isPurchaseMode ? '<th>Qty In Stock</th><th>Purchase Price</th><th>Total Cost Value</th><th>Min Qty</th><th>Status</th>' : ''}
+          ${isSalesMode ? '<th>Qty Available</th><th>Sell Price</th><th>Total Retail Value</th><th>Status</th>' : ''}
+          ${isAllMode ? `${isAdmin ? '<th>Purchase Price</th>' : ''}<th>Sell Price</th><th>Qty In Stock</th><th>Min Qty</th><th>Status</th>` : ''}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
       <tfoot>
         <tr>
-          <td colspan="${isAdmin ? 6 : 5}" style="text-align: right">TOTAL ITEMS IN REPORT:</td>
-          <td colspan="3">${items.length} items &nbsp;|&nbsp; ${lowStock.length} low stock</td>
+          <td colspan="4" style="text-align: right">TOTAL:</td>
+          ${isPurchaseMode ? `
+            <td></td><td></td>
+            <td style="font-weight: 900; color: #047857;">₹${totalCostValuation.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+            <td colspan="2"></td>
+          ` : ''}
+          ${isSalesMode ? `
+            <td></td><td></td>
+            <td style="font-weight: 900; color: #ea580c;">₹${totalSalesValuation.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+            <td></td>
+          ` : ''}
+          ${isAllMode ? `<td colspan="${isAdmin ? 5 : 4}">${items.length} items &nbsp;|&nbsp; ${lowStock.length} low stock</td>` : ''}
         </tr>
       </tfoot>
     </table>`;
@@ -153,26 +226,27 @@ export default function StockItems() {
     } catch (err) { showApiError(err, 'Could not deactivate stock item.'); }
   };
 
-  const handlePrint = async () => {
-    setPrinting(true);
+  const handlePrint = async (mode = 'sales') => {
+    setPrinting(mode);
     try {
       const res = await api.get('/stock/items', {
-        params: { page: 1, limit: 500, search: debouncedSearch || undefined },
+        params: { page: 1, limit: 1000, search: debouncedSearch || undefined },
       });
       const printItems = res.data.items || [];
       const now = new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' });
-      const printContent = buildPrintHtml(printItems, now, canManageStockItems);
-      const win = window.open('', '_blank', 'width=900,height=700');
+      const printContent = buildPrintHtml(printItems, now, canManageStockItems, mode);
+      const win = window.open('', '_blank', 'width=1000,height=750');
       win.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Stock Report — SolarJi</title>
+            <title>${mode === 'purchase' ? 'Purchase Stock Report' : 'Sales Stock Report'} — SolarJi</title>
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
               body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
               .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 2px solid ${ORANGE}; padding-bottom: 12px; }
-              .brand { font-size: 22px; font-weight: 900; color: ${ORANGE}; }
+              .brand { font-size: 22px; font-weight: 900; color: #111; }
+              .brand span { color: ${ORANGE}; }
               table { width: 100%; border-collapse: collapse; }
               thead tr { background: #111; color: #fff; }
               th { padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
@@ -225,13 +299,26 @@ export default function StockItems() {
       <div className="p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Stock Items</h1>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {canManageStockItems && (
+              <button
+                type="button"
+                onClick={() => handlePrint('purchase')}
+                disabled={Boolean(printing)}
+                style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 13px', borderRadius:10, border:'1.5px solid #bbf7d0', background:'#f0fdf4', color:'#166534', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                title="Print Stock with Purchase Prices and Inventory Cost Valuation"
+              >
+                <Printer size={15} className="text-green-600" /> {printing === 'purchase' ? 'Preparing…' : 'Print Purchases'}
+              </button>
+            )}
             <button
-              onClick={handlePrint}
-              disabled={printing}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:'1.5px solid #e5e7eb', background:'#fff', color:'#374151', fontWeight:600, fontSize:13, cursor:'pointer' }}
+              type="button"
+              onClick={() => handlePrint('sales')}
+              disabled={Boolean(printing)}
+              style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 13px', borderRadius:10, border:'1.5px solid #fed7aa', background:'#fff7ed', color:'#9a3412', fontWeight:700, fontSize:13, cursor:'pointer' }}
+              title="Print Stock with Selling Rates and Retail Valuation"
             >
-              <Printer size={15} /> {printing ? 'Preparing…' : 'Print Stock'}
+              <Printer size={15} className="text-orange-500" /> {printing === 'sales' ? 'Preparing…' : 'Print Sales'}
             </button>
             {canManageStockItems && (
               <button onClick={openCreate} className="btn-primary">
@@ -291,11 +378,11 @@ export default function StockItems() {
                           <td className="py-3 px-3 text-gray-700 font-medium">₹{item.sellPrice?.toLocaleString('en-IN')}</td>
                           <td className="py-3 px-3">
                             <span className={`font-semibold ${isLow ? 'text-orange-600' : 'text-gray-700'}`}>
-                              {item.quantity} {item.unit}
+                              {formatQty(item.quantity)} {item.unit}
                               {isLow && <span className="ml-1 text-xs">⚠</span>}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-gray-500">{item.minQuantity}</td>
+                          <td className="py-3 px-3 text-gray-500">{formatQty(item.minQuantity)}</td>
                           {canManageStockItems && (
                             <td className="py-3 px-3">
                               <div className="flex gap-2">
@@ -355,19 +442,19 @@ export default function StockItems() {
                   </div>
                   <div>
                     <label className="label">Purchase Price (₹)</label>
-                    <input className="input" type="number" value={form.purchasePrice} onChange={e => f('purchasePrice', e.target.value)} placeholder="0" />
+                    <input className="input" type="number" step="any" min="0" value={form.purchasePrice} onChange={e => f('purchasePrice', e.target.value)} placeholder="0" />
                   </div>
                   <div>
                     <label className="label">Sell Price (₹)</label>
-                    <input className="input" type="number" value={form.sellPrice} onChange={e => f('sellPrice', e.target.value)} placeholder="0" />
+                    <input className="input" type="number" step="any" min="0" value={form.sellPrice} onChange={e => f('sellPrice', e.target.value)} placeholder="0" />
                   </div>
                   <div>
                     <label className="label">Opening Quantity</label>
-                    <input className="input" type="number" value={form.quantity} onChange={e => f('quantity', e.target.value)} placeholder="0" />
+                    <input className="input" type="number" step="any" min="0" value={form.quantity} onChange={e => f('quantity', e.target.value)} placeholder="0" />
                   </div>
                   <div>
                     <label className="label">Min Quantity Alert</label>
-                    <input className="input" type="number" value={form.minQuantity} onChange={e => f('minQuantity', e.target.value)} placeholder="0" />
+                    <input className="input" type="number" step="any" min="0" value={form.minQuantity} onChange={e => f('minQuantity', e.target.value)} placeholder="0" />
                   </div>
                   <div className="col-span-2">
                     <label className="label">Description</label>

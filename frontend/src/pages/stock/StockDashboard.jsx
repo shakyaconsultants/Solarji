@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 import { useDataCache } from '../../context/DataCacheContext';
 import { useAuth } from '../../context/AuthContext';
+import { formatQty } from '../../constants/voucherBill';
 
 const ORANGE = '#f7941d';
 
@@ -108,7 +109,7 @@ export default function StockDashboard() {
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {lowStock.map(i=>(
                   <span key={i._id} style={{ padding:'3px 10px', borderRadius:99, fontSize:'.75rem', fontWeight:700, background:'rgba(247,148,29,.12)', border:'1px solid rgba(247,148,29,.3)', color:'#92400e' }}>
-                    {i.name} ({i.quantity} {i.unit})
+                    {i.name} ({formatQty(i.quantity)} {i.unit})
                   </span>
                 ))}
               </div>
@@ -142,7 +143,7 @@ export default function StockDashboard() {
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <p style={{ fontWeight:700, fontSize:'.875rem', color: item.quantity<=item.minQuantity&&item.minQuantity>0?ORANGE:'#374151' }}>
-                    {item.quantity} {item.unit}
+                    {formatQty(item.quantity)} {item.unit}
                   </p>
                   <p style={{ fontSize:'.72rem', color:'#9ca3af' }}>₹{item.sellPrice}/unit</p>
                 </div>

@@ -9,14 +9,175 @@ import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 import { useAuth } from '../../context/AuthContext';
 import { useDataCache } from '../../context/DataCacheContext';
+import { formatQty } from '../../constants/voucherBill';
 
 const PAGE_SIZE = 20;
+
+function buildVoucherListPrintHtml(vouchers, now, type) {
+  const isPurchase = type === 'ADD';
+  const isSales = type === 'SELL';
+  const isExpense = type === 'EXPENSE';
+
+  const title = isPurchase
+    ? 'Purchase Vouchers Register'
+    : isSales
+    ? 'Sales Invoices & Vouchers Register'
+    : isExpense
+    ? 'Expense Vouchers Register'
+    : 'Stock Vouchers Register';
+
+  const themeColor = isPurchase ? '#059669' : isSales ? '#ea580c' : isExpense ? '#7c3aed' : '#f7941d';
+
+  let totalQty = 0;
+  let totalAmount = 0;
+
+  const rows = vouchers.map((v, i) => {
+    const dateStr = new Date(v.date || v.createdAt).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    const voucherAmount = Number(v.totalAmount) || 0;
+    totalAmount += voucherAmount;
+
+    const itemsHtml = (v.items || []).map((item) => {
+      const q = Number(item.quantity) || 0;
+      totalQty += q;
+      const rate = Number(item.price) || 0;
+      const total = Number(item.total) || (q * rate);
+      const gstStr = item.gst ? ` (+${item.gst}% GST)` : '';
+      return `
+        <div class="item-row">
+          <span class="item-name"><strong>${item.itemName || item.item?.name || 'Item'}</strong> (${formatQty(item.quantity)} ${item.unit || ''})</span>
+          <span class="item-val">@ ₹${rate.toLocaleString('en-IN')}${gstStr} = ₹${total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <tr>
+        <td style="text-align: center; vertical-align: top;">${i + 1}</td>
+        <td style="vertical-align: top; font-family: monospace; font-weight: 700; color: #1f2937;">${v.voucherNumber}</td>
+        <td style="vertical-align: top; white-space: nowrap;">${dateStr}</td>
+        <td style="vertical-align: top;">
+          <strong>${v.party || '—'}</strong>
+          ${v.partyAddress ? `<div style="font-size: 10px; color: #6b7280; margin-top: 1px;">${v.partyAddress}</div>` : ''}
+          ${v.note ? `<div style="font-size: 10px; color: #9ca3af; font-style: italic; margin-top: 2px;">Note: ${v.note}</div>` : ''}
+        </td>
+        <td style="vertical-align: top;">
+          ${itemsHtml || '<span style="color:#9ca3af;">—</span>'}
+        </td>
+        <td style="text-align: right; vertical-align: top; font-weight: 700; color: ${themeColor};">
+          ₹${voucherAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+        </td>
+        <td style="vertical-align: top; font-size: 11px; color: #4b5563;">${v.createdBy?.name || '—'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${title} — SolarJi</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 12px; color: #111; padding: 20px; background: #fff; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 2px solid ${themeColor}; padding-bottom: 12px; }
+          .brand { font-size: 22px; font-weight: 900; color: #111; }
+          .brand span { color: #f7941d; }
+          .title { font-size: 15px; font-weight: 800; text-transform: uppercase; color: ${themeColor}; margin-top: 2px; }
+          .stats-bar { display: flex; flex-wrap: wrap; gap: 20px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; font-size: 12px; }
+          .stats-bar div { display: flex; gap: 6px; align-items: center; }
+          .stats-bar strong { color: #374151; }
+          .stats-val { font-weight: 800; color: ${themeColor}; }
+          table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 11.5px; }
+          th { background: #f3f4f6; color: #374151; font-weight: 700; text-align: left; padding: 8px 10px; border: 1px solid #e5e7eb; font-size: 11px; text-transform: uppercase; }
+          td { padding: 8px 10px; border: 1px solid #e5e7eb; }
+          tr:nth-child(even) td { background: #fafafa; }
+          .item-row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; margin-bottom: 3px; }
+          .item-name { color: #111; }
+          .item-val { color: #4b5563; white-space: nowrap; font-size: 10.5px; }
+          tfoot td { background: #f9fafb; font-weight: 800; border-top: 2px solid ${themeColor}; padding: 10px; }
+          .no-print { text-align: right; margin-bottom: 12px; }
+          .btn-print { background: ${themeColor}; color: #fff; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; }
+          @page { size: A4 landscape; margin: 12mm 14mm 12mm 14mm; }
+          @media print {
+            .no-print { display: none !important; }
+            body { padding: 0 !important; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print">
+          <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        </div>
+        <div class="header">
+          <div>
+            <div class="brand">Solar<span>Ji</span></div>
+            <div class="title">${title}</div>
+            <div style="font-size: 10.5px; color: #6b7280; margin-top: 2px;">Solar Installation & Energy Solutions</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; color: #4b5563;">Generated: ${now}</div>
+            <div style="font-size: 11px; color: #4b5563; margin-top: 2px;">Total Records: <strong>${vouchers.length}</strong></div>
+          </div>
+        </div>
+
+        <div class="stats-bar">
+          <div><strong>Total Vouchers:</strong> <span class="stats-val">${vouchers.length}</span></div>
+          <div><strong>Total Quantity Transacted:</strong> <span class="stats-val">${formatQty(totalQty)}</span></div>
+          <div><strong>Total Transaction Value:</strong> <span class="stats-val" style="font-size: 13px;">₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 35px; text-align: center;">#</th>
+              <th style="width: 95px;">Voucher No.</th>
+              <th style="width: 95px;">Date</th>
+              <th style="width: 170px;">${isPurchase ? 'Supplier / Party' : isSales ? 'Customer / Party' : 'Party / Recipient'}</th>
+              <th>Items & Breakdown</th>
+              <th style="width: 115px; text-align: right;">Total Amount</th>
+              <th style="width: 110px;">Created By</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" style="text-align: right; text-transform: uppercase;">
+                GRAND TOTAL (${vouchers.length} ${vouchers.length === 1 ? 'Voucher' : 'Vouchers'}):
+              </td>
+              <td><strong>${formatQty(totalQty)} units</strong></td>
+              <td style="text-align: right; color: ${themeColor}; font-size: 13px;">
+                ₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <script>
+          window.addEventListener('load', function() {
+            setTimeout(function() { window.focus(); window.print(); }, 350);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+}
 
 export default function VoucherList() {
   const [typeFilter, setTypeFilter] = useState('');
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [printingReport, setPrintingReport] = useState(null);
   const [page, setPage] = useState(1);
   const [vouchers, setVouchers] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -91,12 +252,61 @@ export default function VoucherList() {
     }
   };
 
+  const handlePrintVouchers = async (type = 'SELL') => {
+    setPrintingReport(type || 'ALL');
+    try {
+      const res = await api.get('/stock/vouchers', {
+        params: { page: 1, limit: 1000, type: type || undefined },
+      });
+      const printVouchers = res.data.vouchers || [];
+      if (printVouchers.length === 0) {
+        toast.error(`No ${type === 'ADD' ? 'purchase' : type === 'SELL' ? 'sales' : 'matching'} vouchers found to print.`);
+        return;
+      }
+      const now = new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' });
+      const printHtml = buildVoucherListPrintHtml(printVouchers, now, type);
+      const win = window.open('', '_blank', 'width=1100,height=800');
+      if (!win) {
+        toast.error('Pop-up blocked. Please allow pop-ups to print reports.');
+        return;
+      }
+      win.document.open();
+      win.document.write(printHtml);
+      win.document.close();
+    } catch (err) {
+      showApiError(err, 'Could not generate vouchers report.');
+    } finally {
+      setPrintingReport(null);
+    }
+  };
+
   return (
     <Layout module="stock">
       <div className="p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Voucher History</h1>
-          <div className="flex gap-2 font-mono">
+          <div className="flex flex-wrap items-center gap-2">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => handlePrintVouchers('ADD')}
+                disabled={Boolean(printingReport)}
+                style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:'1.5px solid #bbf7d0', background:'#f0fdf4', color:'#166534', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                title="Print Purchases Register (all purchase vouchers)"
+              >
+                <Printer size={15} className="text-green-600" /> {printingReport === 'ADD' ? 'Preparing…' : 'Print Purchases'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => handlePrintVouchers('SELL')}
+              disabled={Boolean(printingReport)}
+              style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:'1.5px solid #fed7aa', background:'#fff7ed', color:'#9a3412', fontWeight:700, fontSize:13, cursor:'pointer' }}
+              title="Print Sales Register (all sales invoices)"
+            >
+              <Printer size={15} className="text-orange-500" /> {printingReport === 'SELL' ? 'Preparing…' : 'Print Sales'}
+            </button>
+            <div className="h-6 w-px bg-gray-200 hidden sm:block mx-1" />
             {isAdmin && (
               <>
                 <button onClick={() => navigate('/stock/voucher/add')} className="btn-success gap-2">
@@ -133,16 +343,29 @@ export default function VoucherList() {
         </div>
 
         {isAdmin && (
-          <div className="card mb-4 flex gap-3">
-            {['', 'ADD', 'SELL', 'EXPENSE'].map(t => (
+          <div className="card mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {['', 'ADD', 'SELL', 'EXPENSE'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={`btn ${typeFilter === t ? 'btn-primary' : 'btn-secondary'} text-xs font-semibold`}
+                >
+                  {t === '' ? 'All' : t === 'ADD' ? 'Purchases' : t === 'SELL' ? 'Sales' : 'Expenses'}
+                </button>
+              ))}
+            </div>
+            {typeFilter && (
               <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`btn ${typeFilter === t ? 'btn-primary' : 'btn-secondary'} text-xs font-semibold`}
+                type="button"
+                onClick={() => handlePrintVouchers(typeFilter)}
+                disabled={Boolean(printingReport)}
+                className="btn-secondary text-xs gap-1.5"
+                title={`Print current ${typeFilter === 'ADD' ? 'purchases' : typeFilter === 'SELL' ? 'sales' : 'expenses'} list`}
               >
-                {t === '' ? 'All' : t === 'ADD' ? 'Purchases' : t === 'SELL' ? 'Sales' : 'Expenses'}
+                <Printer className="w-3.5 h-3.5" /> Print {typeFilter === 'ADD' ? 'Purchases' : typeFilter === 'SELL' ? 'Sales' : 'Expenses'}
               </button>
-            ))}
+            )}
           </div>
         )}
 

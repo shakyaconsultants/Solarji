@@ -18,7 +18,7 @@ function recalcRow(row) {
   const qty = parseFloat(row.quantity) || 0;
   const price = parseFloat(row.price) || 0;
   const gst = parseFloat(row.gst) || 0;
-  return { ...row, total: qty * price * (1 + gst / 100) };
+  return { ...row, total: Math.round(qty * price * (1 + gst / 100) * 100) / 100 };
 }
 
 function filledRows(rows) {
@@ -386,6 +386,7 @@ export default function VoucherBillSheetModal({
                           <td className="py-1 px-1 border-r border-gray-100">
                             <input
                               type="number"
+                              step="any"
                               min="0"
                               className="input py-1.5 text-xs text-center w-full"
                               value={row.quantity}
@@ -396,6 +397,8 @@ export default function VoucherBillSheetModal({
                           <td className="py-1 px-1 border-r border-gray-100">
                             <input
                               type="number"
+                              step="any"
+                              min="0"
                               className="input py-1.5 text-xs text-right w-full"
                               value={row.price}
                               onChange={(e) => handleRowChange(idx, 'price', e.target.value)}

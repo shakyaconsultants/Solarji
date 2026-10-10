@@ -308,6 +308,14 @@ export default function FirstPaid() {
                                 <span className="flex items-center gap-1 font-mono">{l.phone}</span>
                                 {l.city && <span>· {l.city}</span>}
                               </div>
+                              {(l.panel || l.inverter || l.structure || l.otherMaterials) && (
+                                <div className="text-[10px] text-gray-600 mt-1 flex flex-wrap gap-1">
+                                  {l.panel && <span className="bg-orange-50 text-orange-800 px-1.5 py-0.5 rounded border border-orange-100" title={`Panel: ${l.panel}`}>☀️ {l.panel}</span>}
+                                  {l.inverter && <span className="bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded border border-blue-100" title={`Inverter: ${l.inverter}`}>⚡ {l.inverter}</span>}
+                                  {l.structure && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded border border-gray-200" title={`Structure: ${l.structure}`}>🏗️ {l.structure}</span>}
+                                  {l.otherMaterials && <span className="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100" title={`Materials: ${l.otherMaterials}`}>📦 {l.otherMaterials}</span>}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>

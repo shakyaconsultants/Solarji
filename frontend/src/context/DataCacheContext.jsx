@@ -349,8 +349,8 @@ export function DataCacheProvider({ children }) {
 
     setStockItems((prev) => prev.map((item) => {
       const row = voucher.items.find((r) => String(r.item?._id || r.item) === String(item._id));
-      if (!row) return item;
-      return { ...item, quantity: item.quantity + sign * row.quantity };
+      const newQty = Math.round(((Number(item.quantity) || 0) + sign * (Number(row.quantity) || 0)) * 10000) / 10000;
+      return { ...item, quantity: newQty };
     }));
   }, []);
 

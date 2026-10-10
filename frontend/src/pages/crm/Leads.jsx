@@ -299,7 +299,14 @@ export default function Leads() {
                               />
                             </td>
                           )}
-                          <td className="py-3 px-3 font-medium text-gray-800">{lead.name}</td>
+                          <td className="py-3 px-3">
+                            <span className="font-medium text-gray-800 block">{lead.name}</span>
+                            {(lead.systemSize || lead.panel || lead.inverter || lead.structure || lead.otherMaterials) && (
+                              <span className="text-[10.5px] text-gray-500 block truncate max-w-[200px]" title={[lead.systemSize, lead.panel, lead.inverter, lead.structure, lead.otherMaterials].filter(Boolean).join(' · ')}>
+                                {[lead.systemSize, lead.panel, lead.inverter, lead.structure, lead.otherMaterials].filter(Boolean).join(' · ')}
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-3 text-gray-600">{lead.phone}</td>
                           <td className="py-3 px-3 text-gray-500">{lead.city || '—'}</td>
                           <td className="py-3 px-3 whitespace-nowrap">

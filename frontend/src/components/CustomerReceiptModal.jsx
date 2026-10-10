@@ -115,7 +115,7 @@ export default function CustomerReceiptModal({ lead, onClose, singlePayment = nu
                   <p><span className="text-gray-500">Phone:</span> <span className="font-mono font-semibold text-gray-800">{lead.phone}</span></p>
                   {lead.email && <p><span className="text-gray-500">Email:</span> <span className="text-gray-700">{lead.email}</span></p>}
                   <p><span className="text-gray-500">Address:</span> <span className="text-gray-700">{[lead.address, lead.city].filter(Boolean).join(', ') || '—'}</span></p>
-                  <p><span className="text-gray-500">System Capacity:</span> <span className="font-semibold text-gray-800">{lead.systemSize || 'Standard'}</span></p>
+                  <p><span className="text-gray-500">Current CRM Stage:</span> <span className="badge text-[10px] py-0.5 px-2 bg-white border border-gray-300">{lead.stage}</span></p>
                 </div>
               </div>
 
@@ -142,12 +142,39 @@ export default function CustomerReceiptModal({ lead, onClose, singlePayment = nu
                     <span className="text-gray-500">Payment Progress:</span>
                     <span className="font-bold text-gray-800">{percentPaid}%</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Current CRM Stage:</span>
-                    <span className="badge text-[10px] py-0.5 px-2 bg-white border border-gray-300">{lead.stage}</span>
-                  </div>
                 </div>
               </div>
+            </div>
+
+            {/* Solar System & Equipment Specifications */}
+            <div className="bg-orange-50/50 border border-orange-200 rounded-lg p-3.5 text-xs">
+              <h4 className="font-bold text-[10px] text-orange-800 uppercase tracking-wider border-b border-orange-200 pb-1.5 mb-2">
+                Solar System & Equipment Specifications
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white p-2 rounded-md border border-orange-100 shadow-2xs">
+                  <span className="text-[10px] font-bold text-orange-700 uppercase block">Capacity</span>
+                  <span className="font-bold text-gray-800 text-xs mt-0.5 block">{lead.systemSize || 'Standard'}</span>
+                </div>
+                <div className="bg-white p-2 rounded-md border border-orange-100 shadow-2xs">
+                  <span className="text-[10px] font-bold text-orange-700 uppercase block">Solar Panel</span>
+                  <span className="font-bold text-gray-800 text-xs mt-0.5 block">{lead.panel || '—'}</span>
+                </div>
+                <div className="bg-white p-2 rounded-md border border-orange-100 shadow-2xs">
+                  <span className="text-[10px] font-bold text-orange-700 uppercase block">Inverter</span>
+                  <span className="font-bold text-gray-800 text-xs mt-0.5 block">{lead.inverter || '—'}</span>
+                </div>
+                <div className="bg-white p-2 rounded-md border border-orange-100 shadow-2xs">
+                  <span className="text-[10px] font-bold text-orange-700 uppercase block">Structure</span>
+                  <span className="font-bold text-gray-800 text-xs mt-0.5 block">{lead.structure || '—'}</span>
+                </div>
+              </div>
+              {lead.otherMaterials && (
+                <div className="mt-2.5 bg-white p-2 rounded-md border border-orange-100 shadow-2xs flex items-center justify-between text-xs">
+                  <span className="text-[10px] font-bold text-orange-700 uppercase">Other Materials / BOS:</span>
+                  <span className="font-medium text-gray-800 text-xs">{lead.otherMaterials}</span>
+                </div>
+              )}
             </div>
 
             {/* Installments Table */}

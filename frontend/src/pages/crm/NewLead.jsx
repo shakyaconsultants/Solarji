@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, UserPlus, Upload, CheckCircle2,
-  FileText, CreditCard, Building, Receipt, Camera, X, Mail, Phone, Hash
+  FileText, CreditCard, Building, Receipt, Camera, X, Mail, Phone, Hash,
+  Package, Sun, Zap, Layers
 } from 'lucide-react';
 import api from '../../api/axios';
 import Layout from '../../components/Layout';
@@ -38,17 +39,26 @@ export default function NewLead() {
     city: '',
     requirements: '',
     systemSize: '',
+    panel: '',
+    inverter: '',
+    structure: '',
+    otherMaterials: '',
     plantCost: '',
     source: 'Manual',
     referralName: '',
     assignedTo: '',
   });
 
+  const [stockItems, setStockItems] = useState([]);
+
   // State to hold selected document files: { aadhaar: { file, previewUrl }, pan: ... }
   const [documents, setDocuments] = useState({});
 
   useEffect(() => {
     if (canViewAllLeads) fetchAssignees();
+    api.get('/stock/public/items')
+      .then(res => setStockItems(res.data.items || []))
+      .catch(err => console.error('Could not fetch stock items:', err));
   }, [canViewAllLeads, fetchAssignees]);
 
   // Clean up object URLs on unmount
@@ -292,10 +302,11 @@ export default function NewLead() {
               </div>
             </div>
 
+            {/* Project Details */}
             <div className="card">
               <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-orange-500" />
-                Project Details & Requirements
+                Project Details & Commercials
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -353,6 +364,123 @@ export default function NewLead() {
               </div>
             </div>
 
+            {/* Dedicated Materials & Equipment Used Card */}
+            <div className="card border-orange-200/90 bg-gradient-to-br from-orange-50/30 to-white shadow-xs">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-orange-100 text-orange-600">
+                    <Package className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-base">
+                      Materials & Equipment Used
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      What materials are used in this installation?
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Optional — Can be added anytime
+                </span>
+              </div>
+
+              <div className="bg-amber-50/70 border border-amber-200/70 rounded-lg p-2.5 text-xs text-amber-900 mb-4 flex items-center gap-2">
+                <span className="text-sm">💡</span>
+                <span>
+                  All material fields are <strong>optional</strong>. You can enter them now if decided, or leave them blank and add or update them anytime from the customer profile.
+                </span>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Sun className="w-3.5 h-3.5 text-orange-500" />
+                      Solar Panel Model
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-normal">Optional</span>
+                  </label>
+                  <input
+                    className="input bg-white"
+                    list="panelOptions"
+                    value={form.panel}
+                    onChange={e => f('panel', e.target.value)}
+                    placeholder="e.g. Adani 550W Mono PERC / Loom Solar"
+                  />
+                  <datalist id="panelOptions">
+                    {stockItems.filter(i => i.category === 'Solar Panel').map(i => (
+                      <option key={i._id} value={i.name} />
+                    ))}
+                  </datalist>
+                  <p className="text-[10px] text-gray-400 mt-1">Select from inventory or enter custom brand & wattage</p>
+                </div>
+
+                <div>
+                  <label className="label flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-blue-500" />
+                      Inverter Model
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-normal">Optional</span>
+                  </label>
+                  <input
+                    className="input bg-white"
+                    list="inverterOptions"
+                    value={form.inverter}
+                    onChange={e => f('inverter', e.target.value)}
+                    placeholder="e.g. Solis 5kW Grid-Tied / Growatt"
+                  />
+                  <datalist id="inverterOptions">
+                    {stockItems.filter(i => i.category === 'Inverter').map(i => (
+                      <option key={i._id} value={i.name} />
+                    ))}
+                  </datalist>
+                  <p className="text-[10px] text-gray-400 mt-1">Select from inventory or enter custom inverter model</p>
+                </div>
+
+                <div>
+                  <label className="label flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-amber-600" />
+                      Mounting Structure Type
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-normal">Optional</span>
+                  </label>
+                  <input
+                    className="input bg-white"
+                    list="structureOptions"
+                    value={form.structure}
+                    onChange={e => f('structure', e.target.value)}
+                    placeholder="e.g. GI High-Rise Elevated / Standard Tin Roof"
+                  />
+                  <datalist id="structureOptions">
+                    {stockItems.filter(i => i.category === 'Structure').map(i => (
+                      <option key={i._id} value={i.name} />
+                    ))}
+                  </datalist>
+                  <p className="text-[10px] text-gray-400 mt-1">Select from inventory or enter structure specifications</p>
+                </div>
+
+                <div>
+                  <label className="label flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-gray-600" />
+                      Other Materials & BOS
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-normal">Optional</span>
+                  </label>
+                  <input
+                    className="input bg-white"
+                    value={form.otherMaterials}
+                    onChange={e => f('otherMaterials', e.target.value)}
+                    placeholder="e.g. Havells ACDB/DCDB, 4mm DC Cables, Earthing kit"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">Batteries, cables, protection boxes, earthing, etc.</p>
+                </div>
+              </div>
+            </div>
+
             {canViewAllLeads && (
               <div className="card">
                 <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -377,19 +505,27 @@ export default function NewLead() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => navigate('/crm/leads')}
-                className="btn-secondary flex-1 justify-center"
+                className="btn-secondary sm:w-1/4 justify-center"
               >
                 Cancel
               </button>
               <button
-                type="submit"
-                className="btn-primary flex-1 justify-center gap-2"
+                type="button"
+                onClick={handleSubmit}
+                className="btn-secondary sm:w-1/3 justify-center border-orange-300 text-orange-600 hover:bg-orange-50 font-semibold"
+                disabled={loading}
               >
-                <span>Step 2: Upload Documents</span>
+                {loading ? 'Creating...' : 'Save & Create Lead Now'}
+              </button>
+              <button
+                type="submit"
+                className="btn-primary sm:w-5/12 justify-center gap-2"
+              >
+                <span>Next: Documents (Optional)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

@@ -221,6 +221,11 @@ export default function QuotationGenerator() {
         referralName: cRef,
         requirements: `${kw} kWp ${sType} Solar system (${cType})${cRef ? ` | Referral: ${cRef}` : ''}`,
         systemSize: `${kw} kW`,
+        panel: selectedPanel?.name || (cType === 'commercial' ? 'Adani / Waaree 600Wp N-Type TopCon' : 'Loom / Adani 550Wp Mono PERC'),
+        inverter: selectedInverter?.name || (sType === 'onGrid' ? 'Solis / Delta / Growatt Grid Tied Inverter' : 'Luminous / Microtek Hybrid Inverter'),
+        structure: structureItem?.name || 'Apollo GI / Tata Mounting Structure',
+        otherMaterials: selectedBattery?.name ? `Battery: ${selectedBattery.name}, ACDB/DCDB, 4mm DC Solar Cables, Earthing Kit` : 'ACDB/DCDB, 4mm DC Solar Cables, Earthing Kit',
+        plantCost: Math.round(total),
         source: cRef ? `Quotation Generator (Ref: ${cRef})` : 'Quotation Generator'
       });
       setStep(3);

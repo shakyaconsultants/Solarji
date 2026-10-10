@@ -61,12 +61,15 @@ function applyVoucherRowChange(changes, stockItem, type, row) {
     ? (row.price ?? stockItem.purchasePrice)
     : (row.price ?? stockItem.sellPrice);
 
-  change.quantityDelta += type === 'ADD' ? row.quantity : -row.quantity;
-  if (row.price && type === 'ADD') change.purchasePrice = row.price;
-  if (row.price && type === 'SELL') change.sellPrice = row.price;
+  const rowQty = Math.round((Number(row.quantity) || 0) * 10000) / 10000;
+  const delta = type === 'ADD' ? rowQty : -rowQty;
+  change.quantityDelta = Math.round((change.quantityDelta + delta) * 10000) / 10000;
+  if (row.price && type === 'ADD') change.purchasePrice = Number(row.price);
+  if (row.price && type === 'SELL') change.sellPrice = Number(row.price);
 
   const gst = Number(row.gst) || 0;
-  return { price, total: price * row.quantity * (1 + gst / 100) };
+  const total = Math.round(price * rowQty * (1 + gst / 100) * 100) / 100;
+  return { price, total, quantity: rowQty };
 }
 
 function buildStockBulkOps(changes) {
@@ -134,6 +137,12 @@ router.post('/items', stockItemManage, async (req, res) => {
   try {
     const body = { ...req.body, name: req.body.name?.trim() };
     if (!body.name) return res.status(400).json({ message: 'Item name required' });
+    if (body.quantity !== undefined && body.quantity !== '') {
+      body.quantity = Math.round(Number(body.quantity) * 10000) / 10000;
+    }
+    if (body.minQuantity !== undefined && body.minQuantity !== '') {
+      body.minQuantity = Math.round(Number(body.minQuantity) * 10000) / 10000;
+    }
 
     const existing = await StockItem.findOne({ name: body.name });
     if (existing) {
@@ -160,6 +169,12 @@ router.put('/items/:id', stockItemManage, async (req, res) => {
   try {
     const body = { ...req.body };
     if (body.name) body.name = body.name.trim();
+    if (body.quantity !== undefined && body.quantity !== '') {
+      body.quantity = Math.round(Number(body.quantity) * 10000) / 10000;
+    }
+    if (body.minQuantity !== undefined && body.minQuantity !== '') {
+      body.minQuantity = Math.round(Number(body.minQuantity) * 10000) / 10000;
+    }
 
     if (body.name) {
       const duplicate = await StockItem.findOne({
@@ -194,7 +209,7 @@ router.delete('/items/:id', stockItemManage, async (req, res) => {
 // Vouchers
 router.get('/vouchers', stockAccess, async (req, res) => {
   try {
-    const { page, limit, skip } = parsePagination(req.query);
+    const { page, limit, skip } = parsePagination(req.query, 20, 1000);
     const filter = {};
     if (req.query.type) filter.type = req.query.type;
 
@@ -292,16 +307,17 @@ router.post('/vouchers', stockTransact, async (req, res) => {
       const processedItems = [];
 
       for (const row of items) {
-        const qty = Number(row.quantity) || 1;
+        const qty = row.quantity != null && row.quantity !== '' ? Number(row.quantity) : 1;
+        const validQty = Math.round(qty * 10000) / 10000;
         const price = Number(row.price) || 0;
         const gst = Number(row.gst) || 0;
-        const total = qty * price * (1 + gst / 100);
+        const total = Math.round(validQty * price * (1 + gst / 100) * 100) / 100;
         totalAmount += total;
 
         processedItems.push({
           itemName: row.itemName,
           unit: row.unit || 'piece',
-          quantity: qty,
+          quantity: validQty,
           price,
           gst,
           total,
@@ -336,14 +352,19 @@ router.post('/vouchers', stockTransact, async (req, res) => {
         return res.status(400).json({ message: `Item not found: ${row.item}` });
       }
 
-      const { price, total } = applyVoucherRowChange(changes, stockItem, type, row);
+      const rowQty = Math.round((Number(row.quantity) || 0) * 10000) / 10000;
+      if (rowQty <= 0) {
+        return res.status(400).json({ message: `Quantity must be greater than 0 for ${stockItem.name}` });
+      }
+
+      const { price, total } = applyVoucherRowChange(changes, stockItem, type, { ...row, quantity: rowQty });
       totalAmount += total;
 
       processedItems.push({
         item: stockItem._id,
         itemName: stockItem.name,
         unit: stockItem.unit || 'piece',
-        quantity: row.quantity,
+        quantity: rowQty,
         price,
         gst: Number(row.gst) || 0,
         total,
@@ -351,9 +372,9 @@ router.post('/vouchers', stockTransact, async (req, res) => {
     }
 
     for (const change of changes.values()) {
-      const newQuantity = change.item.quantity + change.quantityDelta;
-      if (newQuantity < 0) {
-        return res.status(400).json({ message: `Insufficient stock for ${change.item.name}` });
+      const newQuantity = Math.round((change.item.quantity + change.quantityDelta) * 10000) / 10000;
+      if (newQuantity < -0.00001) {
+        return res.status(400).json({ message: `Insufficient stock for ${change.item.name}. Available: ${change.item.quantity} ${change.item.unit || ''}` });
       }
     }
 

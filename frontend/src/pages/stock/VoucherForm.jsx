@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { showApiError } from '../../utils/apiError';
 import { useDataCache } from '../../context/DataCacheContext';
 import { useAuth } from '../../context/AuthContext';
-import { buildDraftVoucher, emptyVoucherRow } from '../../constants/voucherBill';
+import { buildDraftVoucher, emptyVoucherRow, formatQty } from '../../constants/voucherBill';
 const todayISO = () => new Date().toISOString().split('T')[0];
 
 export default function VoucherForm({ type }) {
@@ -94,7 +94,7 @@ export default function VoucherForm({ type }) {
     const qty = parseFloat(newRows[idx].quantity) || 0;
     const price = parseFloat(newRows[idx].price) || 0;
     const gst = parseFloat(newRows[idx].gst) || 0;
-    newRows[idx].total = qty * price * (1 + gst / 100);
+    newRows[idx].total = Math.round(qty * price * (1 + gst / 100) * 100) / 100;
     setRows(newRows);
   };
 
@@ -104,7 +104,7 @@ export default function VoucherForm({ type }) {
     const qty = parseFloat(newRows[idx].quantity) || 0;
     const price = parseFloat(newRows[idx].price) || 0;
     const gst = parseFloat(newRows[idx].gst) || 0;
-    newRows[idx].total = qty * price * (1 + gst / 100);
+    newRows[idx].total = Math.round(qty * price * (1 + gst / 100) * 100) / 100;
     setRows(newRows);
   };
 
@@ -377,7 +377,7 @@ export default function VoucherForm({ type }) {
                                             setItemSearchText('');
                                           }}
                                         >
-                                          {i.name} (Stock: {i.quantity} {i.unit})
+                                          {i.name} (Stock: {formatQty(i.quantity)} {i.unit})
                                         </button>
                                       ))}
                                     {stockItems.filter((i) =>
@@ -398,8 +398,9 @@ export default function VoucherForm({ type }) {
                       <td className="py-2 px-2">
                         <input
                           type="number"
+                          step="any"
                           className="input text-right"
-                          min="1"
+                          min="0.0001"
                           value={row.quantity}
                           onChange={(e) => handleRowChange(idx, 'quantity', e.target.value)}
                         />
@@ -407,6 +408,7 @@ export default function VoucherForm({ type }) {
                       <td className="py-2 px-2">
                         <input
                           type="number"
+                          step="any"
                           className="input text-right"
                           value={row.price}
                           onChange={(e) => handleRowChange(idx, 'price', e.target.value)}

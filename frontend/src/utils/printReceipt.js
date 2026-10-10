@@ -379,18 +379,14 @@ export function generateReceiptHtml(lead, singlePayment = null) {
               <span class="info-value">${[lead.address, lead.city].filter(Boolean).join(', ') || '—'}</span>
             </div>
             <div class="info-row">
-              <span class="info-label">System Size:</span>
-              <span class="info-value">${lead.systemSize || 'Standard Residential/Commercial'}</span>
+              <span class="info-label">Current CRM Stage:</span>
+              <span class="info-value">${lead.stage || 'Lead'}</span>
             </div>
           </div>
 
           <!-- Account Overview -->
           <div class="info-card">
             <h4>Project & Financial Summary</h4>
-            <div class="info-row">
-              <span class="info-label">Current CRM Stage:</span>
-              <span class="info-value">${lead.stage || 'Lead'}</span>
-            </div>
             <div class="info-row">
               <span class="info-label">Total Plant Cost:</span>
               <span class="info-value">${formatINR(plantCost)}</span>
@@ -410,6 +406,36 @@ export function generateReceiptHtml(lead, singlePayment = null) {
               <span class="info-value">${percentPaid}%</span>
             </div>
           </div>
+        </div>
+
+        <!-- Solar Equipment & Structure Specifications -->
+        <div class="info-card" style="margin-bottom: 16px; background: #fffcf7; border: 1.5px solid #fed7aa;">
+          <h4 style="color: #ea580c; border-bottom: 1px solid #ffedd5; padding-bottom: 5px; margin-bottom: 8px;">
+            Solar System & Equipment Specifications
+          </h4>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+            <div style="background: #ffffff; padding: 7px 10px; border-radius: 6px; border: 1px solid #fed7aa;">
+              <div style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; color: #9a3412;">System Capacity</div>
+              <div style="font-size: 11.5px; font-weight: 800; color: #1f2937; margin-top: 3px;">${lead.systemSize || 'Standard'}</div>
+            </div>
+            <div style="background: #ffffff; padding: 7px 10px; border-radius: 6px; border: 1px solid #fed7aa;">
+              <div style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; color: #9a3412;">Solar Panel</div>
+              <div style="font-size: 11.5px; font-weight: 800; color: #1f2937; margin-top: 3px;">${lead.panel || '—'}</div>
+            </div>
+            <div style="background: #ffffff; padding: 7px 10px; border-radius: 6px; border: 1px solid #fed7aa;">
+              <div style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; color: #9a3412;">Inverter Model</div>
+              <div style="font-size: 11.5px; font-weight: 800; color: #1f2937; margin-top: 3px;">${lead.inverter || '—'}</div>
+            </div>
+            <div style="background: #ffffff; padding: 7px 10px; border-radius: 6px; border: 1px solid #fed7aa;">
+              <div style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; color: #9a3412;">Mounting Structure</div>
+              <div style="font-size: 11.5px; font-weight: 800; color: #1f2937; margin-top: 3px;">${lead.structure || '—'}</div>
+            </div>
+          </div>
+          ${lead.otherMaterials ? `
+            <div style="margin-top: 8px; background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #fed7aa; font-size: 10px; color: #4b5563;">
+              <strong style="color: #9a3412; text-transform: uppercase; font-size: 8.5px; display: inline-block; margin-right: 4px;">Other Materials / BOS:</strong> ${lead.otherMaterials}
+            </div>
+          ` : ''}
         </div>
 
         <!-- 4 KPI Boxes -->
@@ -545,6 +571,14 @@ export function generateCustomerListPrintHtml(leads, title, stats = {}) {
           <strong>${l.name}</strong><br/>
           <span style="color: #6b7280; font-size: 10px;">${l.phone} ${l.city ? '· ' + l.city : ''}</span>
         </td>
+        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; font-size: 10px; line-height: 1.35; max-width: 220px;">
+          ${l.systemSize ? `<div style="font-weight: 800; color: #f7941d;">${l.systemSize}</div>` : ''}
+          ${l.panel ? `<div style="color: #374151;"><strong>Panel:</strong> ${l.panel}</div>` : ''}
+          ${l.inverter ? `<div style="color: #374151;"><strong>Inverter:</strong> ${l.inverter}</div>` : ''}
+          ${l.structure ? `<div style="color: #374151;"><strong>Structure:</strong> ${l.structure}</div>` : ''}
+          ${l.otherMaterials ? `<div style="color: #4b5563;"><strong>Other:</strong> ${l.otherMaterials}</div>` : ''}
+          ${!l.systemSize && !l.panel && !l.inverter && !l.structure && !l.otherMaterials ? '<span style="color: #9ca3af;">—</span>' : ''}
+        </td>
         <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb;">
           ${fp ? `
             <strong>${formatINR(fp.amount)}</strong><br/>
@@ -679,8 +713,9 @@ export function generateCustomerListPrintHtml(leads, title, stats = {}) {
         <table>
           <thead>
             <tr>
-              <th>#</th>
+              <th style="width: 35px;">#</th>
               <th>Customer Name & Contact</th>
+              <th>System Equipment (Panel / Inverter / Structure)</th>
               <th>First Payment</th>
               <th>Total Plant Cost</th>
               <th>Total Paid</th>

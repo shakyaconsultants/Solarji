@@ -87,7 +87,7 @@ const LEAD_DETAIL_FIELDS = [
 // Public route - create lead from quotation generator
 router.post('/public', async (req, res) => {
   try {
-    const { name, phone, email, address, city, requirements, systemSize, source, plantCost, referralName } = req.body;
+    const { name, phone, email, address, city, requirements, systemSize, panel, inverter, structure, otherMaterials, source, plantCost, referralName } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ message: 'Name and phone number are required' });
     }
@@ -101,6 +101,10 @@ router.post('/public', async (req, res) => {
 
     const lead = await Lead.create({
       name, phone, email, address, city, requirements, systemSize,
+      panel: panel ? String(panel).trim() : undefined,
+      inverter: inverter ? String(inverter).trim() : undefined,
+      structure: structure ? String(structure).trim() : undefined,
+      otherMaterials: otherMaterials ? String(otherMaterials).trim() : undefined,
       referralName: trimmedRef,
       plantCost: Math.max(0, Number(plantCost) || 0),
       source: source || (trimmedRef ? `Quotation Generator (Ref: ${trimmedRef})` : 'Quotation Generator'),
@@ -481,7 +485,7 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
   try {
     const {
       name, phone, email, panNumber, aadhaarNumber, address, city,
-      requirements, systemSize, source, assignedTo, plantCost, referralName,
+      requirements, systemSize, panel, inverter, structure, otherMaterials, source, assignedTo, plantCost, referralName,
     } = req.body;
     
     if (!name || !name.trim() || !phone || !phone.trim()) {
@@ -502,6 +506,10 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
       city: city ? city.trim() : undefined,
       requirements: requirements ? requirements.trim() : undefined,
       systemSize: systemSize ? systemSize.trim() : undefined,
+      panel: panel ? panel.trim() : undefined,
+      inverter: inverter ? inverter.trim() : undefined,
+      structure: structure ? structure.trim() : undefined,
+      otherMaterials: otherMaterials ? otherMaterials.trim() : undefined,
       source: source || 'Manual',
       referralName: referralName ? referralName.trim() : undefined,
       plantCost: Math.max(0, Number(plantCost) || 0),
@@ -772,7 +780,10 @@ router.delete('/:id/notes/:noteId', protect, async (req, res) => {
 router.put('/:id', protect, async (req, res) => {
   try {
     const lead = await Lead.findByIdAndUpdate(req.params.id, req.body, { new: true })
-      .populate(LEAD_LIST_FIELDS);
+      .populate(LEAD_DETAIL_FIELDS);
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+    dashCache.invalidateCrm();
+    dashCache.invalidateAdmin();
     res.json(lead);
   } catch (err) {
     sendError(res, err);
