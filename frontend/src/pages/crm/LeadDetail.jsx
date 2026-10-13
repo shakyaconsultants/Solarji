@@ -163,9 +163,13 @@ export default function LeadDetail() {
     otherMaterials: '',
     referralName: '',
     requirements: '',
+    loadGroup: '',
+    loadGroupName: '',
   });
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [stockItems, setStockItems] = useState([]);
+  const [loadGroups, setLoadGroups] = useState([]);
+  const [customerLoadMode, setCustomerLoadMode] = useState('group');
 
   useEffect(() => {
     ensureLeadDetail(id);
@@ -173,7 +177,49 @@ export default function LeadDetail() {
     api.get('/stock/public/items')
       .then(res => setStockItems(res.data.items || []))
       .catch(err => console.error('Could not fetch stock items:', err));
+    api.get('/stock/public/groups')
+      .then(res => setLoadGroups(res.data.groups || []))
+      .catch(err => console.error('Could not fetch load groups:', err));
   }, [id, ensureLeadDetail, fetchAssignees]);
+
+  const applyLoadGroupToCustomer = (group) => {
+    if (!group) return;
+    const panels = (group.items || []).filter(i => i.category === 'Solar Panel');
+    const inverters = (group.items || []).filter(i => i.category === 'Inverter');
+    const structures = (group.items || []).filter(i => i.category === 'Structure');
+    const others = (group.items || []).filter(i => !['Solar Panel', 'Inverter', 'Structure'].includes(i.category));
+
+    const panelStr = panels.map(p => `${p.quantity}x ${p.itemName}`).join(', ');
+    const inverterStr = inverters.map(inv => `${inv.quantity}x ${inv.itemName}`).join(', ');
+    const structureStr = structures.map(s => `${s.quantity} ${s.unit || 'set'} ${s.itemName}`).join(', ');
+    const othersStr = others.map(o => `${o.quantity} ${o.unit || ''} ${o.itemName}`).join(', ');
+
+    setCustomerForm(prev => ({
+      ...prev,
+      loadGroup: group._id,
+      loadGroupName: `${group.load} - ${group.name}`,
+      systemSize: group.load || prev.systemSize,
+      panel: panelStr || prev.panel,
+      inverter: inverterStr || prev.inverter,
+      structure: structureStr || prev.structure,
+      otherMaterials: othersStr || prev.otherMaterials,
+    }));
+
+    toast.success(`Applied ${group.load} decided component grouping!`);
+  };
+
+  const appendMaterialToCustomer = (mat) => {
+    setCustomerForm(prev => {
+      const existing = (prev.otherMaterials || '').trim();
+      if (!existing) return { ...prev, otherMaterials: mat };
+      if (existing.toLowerCase().includes(mat.toLowerCase())) {
+        toast('Already added in materials', { icon: 'ℹ️' });
+        return prev;
+      }
+      return { ...prev, otherMaterials: `${existing}, ${mat}` };
+    });
+    toast.success(`Appended "${mat}"!`);
+  };
 
   useEffect(() => {
     if (lead) {
@@ -200,7 +246,10 @@ export default function LeadDetail() {
       otherMaterials: lead.otherMaterials || '',
       referralName: lead.referralName || '',
       requirements: lead.requirements || '',
+      loadGroup: lead.loadGroup?._id || lead.loadGroup || '',
+      loadGroupName: lead.loadGroupName || lead.loadGroup?.name || '',
     });
+    setCustomerLoadMode(lead.loadGroup || lead.loadGroupName ? 'group' : 'manual');
     setShowEditCustomerModal(true);
   };
 
@@ -692,10 +741,17 @@ export default function LeadDetail() {
                 return (
                   <div className="mb-4 bg-orange-50/60 border border-orange-200/80 rounded-xl p-3.5">
                     <div className="flex items-center justify-between mb-2.5">
-                      <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <Sun className="w-3.5 h-3.5 text-orange-600" />
-                        <span>Solar System & Equipment Specifications</span>
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sun className="w-3.5 h-3.5 text-orange-600" />
+                          <span>Solar System & Equipment Specifications</span>
+                        </p>
+                        {(lead.loadGroupName || lead.loadGroup?.name) && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                            ⚡ Kit: {lead.loadGroupName || lead.loadGroup?.name}
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={handleOpenEditCustomer}
@@ -1355,15 +1411,86 @@ export default function LeadDetail() {
 
                 {/* Equipment & System Specifications */}
                 <div className="bg-orange-50/50 border border-orange-200 rounded-xl p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <h4 className="font-bold text-xs text-orange-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Sun className="w-3.5 h-3.5 text-orange-600" />
-                      <span>Solar System & Equipment Specifications</span>
+                      <span>Solar System & Load Management</span>
                     </h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      Optional — Edit Anytime
-                    </span>
+
+                    {/* Mode Toggle Buttons */}
+                    <div className="inline-flex rounded-lg p-0.5 bg-white border border-orange-200 text-[10.5px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setCustomerLoadMode('group')}
+                        className={`px-2.5 py-1 rounded transition-all ${
+                          customerLoadMode === 'group'
+                            ? 'bg-orange-500 text-white font-bold shadow-2xs'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        ⚡ Use Load Group
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomerLoadMode('manual');
+                          setCustomerForm(p => ({ ...p, loadGroup: '', loadGroupName: '' }));
+                        }}
+                        className={`px-2.5 py-1 rounded transition-all ${
+                          customerLoadMode === 'manual'
+                            ? 'bg-orange-500 text-white font-bold shadow-2xs'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        ✍️ Edit Manually
+                      </button>
+                    </div>
                   </div>
+
+                  {customerLoadMode === 'group' && loadGroups.length > 0 && (
+                    <div className="p-2.5 bg-white border border-orange-200/90 rounded-lg space-y-2">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[11px] font-bold text-gray-800 flex items-center gap-1">
+                          ⚡ Select Load Group (BOM Kit):
+                        </span>
+                        <span className="text-[10px] text-gray-400">Picks decided standard components</span>
+                      </div>
+                      <select
+                        className="input text-xs bg-white py-1 px-2 font-semibold text-gray-800"
+                        value={customerForm.loadGroup || ''}
+                        onChange={(e) => {
+                          const g = loadGroups.find(lg => lg._id === e.target.value);
+                          if (g) applyLoadGroupToCustomer(g);
+                        }}
+                      >
+                        <option value="">-- Choose a Load Group Kit --</option>
+                        {loadGroups.map(lg => (
+                          <option key={lg._id} value={lg._id}>
+                            {lg.load} — {lg.name} ({lg.systemType || 'On-Grid'}) • ₹{(lg.totalEstimatedCost || 0).toLocaleString('en-IN')}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {loadGroups.map(lg => (
+                          <button
+                            key={lg._id}
+                            type="button"
+                            onClick={() => applyLoadGroupToCustomer(lg)}
+                            className={`text-[10.5px] py-0.5 px-2 font-bold rounded border transition-all ${
+                              customerForm.loadGroup === lg._id
+                                ? 'bg-orange-500 text-white border-orange-600 shadow-2xs'
+                                : 'bg-orange-50/50 text-gray-700 border-orange-200 hover:border-orange-500 hover:bg-orange-100'
+                            }`}
+                            title={`Apply decided components for ${lg.name}`}
+                          >
+                            {lg.load} ({lg.name})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div>
                       <label className="label text-[11px]">System Size / Capacity</label>
@@ -1434,6 +1561,32 @@ export default function LeadDetail() {
                         placeholder="e.g. Havells ACDB/DCDB, 4mm DC Cables, Earthing kit, Batteries"
                       />
                       <p className="text-[10px] text-gray-400 mt-1">Cables, distribution boxes, protection devices, earthing, etc. Can be added or edited anytime.</p>
+                    </div>
+                  </div>
+
+                  {/* Quick BOS material chips */}
+                  <div className="pt-1 border-t border-orange-200/60">
+                    <span className="text-[10px] font-bold text-orange-900 block mb-1">
+                      + Quick Append BOS Materials:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        'Havells ACDB/DCDB',
+                        '4mm DC Solar Wire (50m)',
+                        'Chemical Earthing Kit',
+                        'Lightning Arrester',
+                        'Net Meter',
+                        '150Ah Battery',
+                      ].map(mat => (
+                        <button
+                          key={mat}
+                          type="button"
+                          onClick={() => appendMaterialToCustomer(mat)}
+                          className="text-[10px] py-0.5 px-1.5 bg-white text-gray-700 font-semibold rounded border border-orange-200 hover:border-orange-500 hover:bg-orange-50"
+                        >
+                          + {mat}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>

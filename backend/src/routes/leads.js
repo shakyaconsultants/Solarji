@@ -74,6 +74,7 @@ function calcPoints(stageSinceDate) {
 const LEAD_LIST_FIELDS = [
   { path: 'assignedTo', select: 'name email points' },
   { path: 'createdBy', select: 'name email' },
+  { path: 'loadGroup', select: 'name load systemType totalEstimatedCost items' },
 ];
 
 const LEAD_DETAIL_FIELDS = [
@@ -485,7 +486,8 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
   try {
     const {
       name, phone, email, panNumber, aadhaarNumber, address, city,
-      requirements, systemSize, panel, inverter, structure, otherMaterials, source, assignedTo, plantCost, referralName,
+      requirements, systemSize, panel, inverter, structure, otherMaterials,
+      loadGroup, loadGroupName, source, assignedTo, plantCost, referralName,
     } = req.body;
     
     if (!name || !name.trim() || !phone || !phone.trim()) {
@@ -495,6 +497,10 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
     const finalAssignedTo = (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo))
       ? assignedTo
       : req.user._id;
+
+    const validLoadGroup = (loadGroup && mongoose.Types.ObjectId.isValid(loadGroup))
+      ? loadGroup
+      : undefined;
 
     const lead = new Lead({
       name: name.trim(),
@@ -510,6 +516,8 @@ router.post('/', protect, upload.fields(docFields), async (req, res) => {
       inverter: inverter ? inverter.trim() : undefined,
       structure: structure ? structure.trim() : undefined,
       otherMaterials: otherMaterials ? otherMaterials.trim() : undefined,
+      loadGroup: validLoadGroup,
+      loadGroupName: loadGroupName ? loadGroupName.trim() : undefined,
       source: source || 'Manual',
       referralName: referralName ? referralName.trim() : undefined,
       plantCost: Math.max(0, Number(plantCost) || 0),

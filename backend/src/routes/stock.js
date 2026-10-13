@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const StockItem = require('../models/StockItem');
 const StockVoucher = require('../models/StockVoucher');
+const LoadItemGroup = require('../models/LoadItemGroup');
 const {
   protect, stockAccess, stockItemManage, stockTransact, isAdmin,
 } = require('../middleware/auth');
@@ -20,6 +21,19 @@ router.get('/public/items', async (req, res) => {
     res.json({ items });
   } catch (err) {
     sendError(res, err, 'Could not load public stock items.');
+  }
+});
+
+// Public route - get active load groups for leads, quotations & bill forms
+router.get('/public/groups', async (req, res) => {
+  try {
+    const groups = await LoadItemGroup.find({ isActive: true })
+      .populate('items.item', 'name quantity unit sellPrice purchasePrice')
+      .sort({ loadCapacity: 1, name: 1 })
+      .lean();
+    res.json({ groups });
+  } catch (err) {
+    sendError(res, err, 'Could not load public load groups.');
   }
 });
 
@@ -398,6 +412,122 @@ router.post('/vouchers', stockTransact, async (req, res) => {
     res.status(201).json(voucher);
   } catch (err) {
     sendError(res, err, 'Could not create voucher.');
+  }
+});
+
+// Load Item Groupings (BOM Kits per load capacity like 3 kW, 5 kW)
+router.get('/groups', stockAccess, async (req, res) => {
+  try {
+    const groups = await LoadItemGroup.find({ isActive: true })
+      .populate('items.item', 'name quantity unit sellPrice purchasePrice category')
+      .populate('createdBy', 'name')
+      .sort({ loadCapacity: 1, name: 1 })
+      .lean();
+    res.json({ groups });
+  } catch (err) {
+    sendError(res, err, 'Could not load load groups.');
+  }
+});
+
+router.get('/groups/:id', stockAccess, async (req, res) => {
+  try {
+    const group = await LoadItemGroup.findById(req.params.id)
+      .populate('items.item', 'name quantity unit sellPrice purchasePrice category')
+      .populate('createdBy', 'name');
+    if (!group || !group.isActive) {
+      return res.status(404).json({ message: 'Load group not found' });
+    }
+    res.json(group);
+  } catch (err) {
+    sendError(res, err, 'Could not load load group details.');
+  }
+});
+
+router.post('/groups', stockItemManage, async (req, res) => {
+  try {
+    const { name, load, systemType, description, items } = req.body;
+    if (!name || !load) {
+      return res.status(400).json({ message: 'Name and Load (e.g. 3 kW) are required.' });
+    }
+
+    const numMatch = String(load).match(/[\d.]+/);
+    const loadCapacity = numMatch ? parseFloat(numMatch[0]) : 0;
+
+    const cleanItems = (Array.isArray(items) ? items : []).map((i) => ({
+      item: i.item || undefined,
+      itemName: (i.itemName || '').trim(),
+      category: (i.category || 'General').trim(),
+      quantity: Math.max(0, Math.round((Number(i.quantity) || 0) * 10000) / 10000),
+      unit: (i.unit || 'piece').trim(),
+      price: Number(i.price) || 0,
+      notes: (i.notes || '').trim(),
+    })).filter((i) => i.itemName);
+
+    const totalEstimatedCost = cleanItems.reduce((acc, i) => acc + (i.quantity * i.price), 0);
+
+    const group = await LoadItemGroup.create({
+      name: name.trim(),
+      load: load.trim(),
+      loadCapacity,
+      systemType: (systemType || 'On-Grid').trim(),
+      description: (description || '').trim(),
+      items: cleanItems,
+      totalEstimatedCost,
+      createdBy: req.user._id,
+    });
+
+    await group.populate('items.item', 'name quantity unit sellPrice purchasePrice category');
+    res.status(201).json(group);
+  } catch (err) {
+    sendError(res, err, 'Could not create load group.');
+  }
+});
+
+router.put('/groups/:id', stockItemManage, async (req, res) => {
+  try {
+    const { name, load, systemType, description, items } = req.body;
+    const numMatch = load ? String(load).match(/[\d.]+/) : null;
+    const loadCapacity = numMatch ? parseFloat(numMatch[0]) : undefined;
+
+    const cleanItems = (Array.isArray(items) ? items : []).map((i) => ({
+      item: i.item || undefined,
+      itemName: (i.itemName || '').trim(),
+      category: (i.category || 'General').trim(),
+      quantity: Math.max(0, Math.round((Number(i.quantity) || 0) * 10000) / 10000),
+      unit: (i.unit || 'piece').trim(),
+      price: Number(i.price) || 0,
+      notes: (i.notes || '').trim(),
+    })).filter((i) => i.itemName);
+
+    const totalEstimatedCost = cleanItems.reduce((acc, i) => acc + (i.quantity * i.price), 0);
+
+    const update = {
+      ...(name && { name: name.trim() }),
+      ...(load && { load: load.trim() }),
+      ...(loadCapacity !== undefined && { loadCapacity }),
+      ...(systemType && { systemType: systemType.trim() }),
+      description: (description || '').trim(),
+      items: cleanItems,
+      totalEstimatedCost,
+    };
+
+    const group = await LoadItemGroup.findByIdAndUpdate(req.params.id, update, { new: true })
+      .populate('items.item', 'name quantity unit sellPrice purchasePrice category')
+      .populate('createdBy', 'name');
+
+    if (!group) return res.status(404).json({ message: 'Load group not found' });
+    res.json(group);
+  } catch (err) {
+    sendError(res, err, 'Could not update load group.');
+  }
+});
+
+router.delete('/groups/:id', stockItemManage, async (req, res) => {
+  try {
+    await LoadItemGroup.findByIdAndUpdate(req.params.id, { isActive: false });
+    res.json({ message: 'Load group deactivated successfully' });
+  } catch (err) {
+    sendError(res, err, 'Could not deactivate load group.');
   }
 });
 

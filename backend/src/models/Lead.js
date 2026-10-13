@@ -36,6 +36,8 @@ const leadSchema = new mongoose.Schema({
   inverter: { type: String, trim: true },
   structure: { type: String, trim: true },
   otherMaterials: { type: String, trim: true },
+  loadGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'LoadItemGroup' },
+  loadGroupName: { type: String, trim: true },
   source: { type: String, default: 'Manual' },
   referralName: { type: String, trim: true },
   plantCost: { type: Number, default: 0, min: 0 },

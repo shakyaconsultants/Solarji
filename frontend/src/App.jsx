@@ -19,6 +19,7 @@ const Complaints = lazy(() => import('./pages/crm/Complaints'))
 const Orders = lazy(() => import('./pages/crm/Orders'))
 const StockDashboard = lazy(() => import('./pages/stock/StockDashboard'))
 const StockItems = lazy(() => import('./pages/stock/StockItems'))
+const LoadGroups = lazy(() => import('./pages/stock/LoadGroups'))
 const VoucherForm = lazy(() => import('./pages/stock/VoucherForm'))
 const VoucherList = lazy(() => import('./pages/stock/VoucherList'))
 const VoucherPreview = lazy(() => import('./pages/stock/VoucherPreview'))
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="/crm/attendance" element={<LazyPage><Attendance /></LazyPage>} />
         <Route path="/stock" element={<LazyPage stockOnly><StockDashboard /></LazyPage>} />
         <Route path="/stock/items" element={<LazyPage stockOnly><StockItems /></LazyPage>} />
+        <Route path="/stock/groups" element={<LazyPage stockOnly><LoadGroups /></LazyPage>} />
         <Route path="/stock/voucher/add" element={<LazyPage stockOnly><VoucherForm type="ADD" /></LazyPage>} />
         <Route path="/stock/voucher/sell" element={<LazyPage stockOnly><VoucherForm type="SELL" /></LazyPage>} />
         <Route path="/stock/voucher/expense" element={<LazyPage stockOnly><VoucherForm type="EXPENSE" /></LazyPage>} />

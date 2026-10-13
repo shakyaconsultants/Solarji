@@ -18,6 +18,7 @@ export default function VoucherForm({ type }) {
   const { addStockVoucher } = useDataCache();
   const { user, isAdmin } = useAuth();
   const [stockItems, setStockItems] = useState([]);
+  const [loadGroups, setLoadGroups] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [party, setParty] = useState('');
   const [partyAddress, setPartyAddress] = useState('');
@@ -78,7 +79,43 @@ export default function VoucherForm({ type }) {
       .then((res) => setStockItems(res.data.items || []))
       .catch((err) => showApiError(err, 'Could not load stock items for voucher.'))
       .finally(() => setItemsLoading(false));
+
+    api.get('/stock/public/groups')
+      .then((res) => setLoadGroups(res.data.groups || []))
+      .catch(() => {});
   }, [type, isAdmin, navigate]);
+
+  const applyLoadGroupToVoucher = (group) => {
+    if (!group || !(group.items || []).length) return;
+
+    const appliedRows = group.items.map((gItem) => {
+      const matchedStock = stockItems.find((si) =>
+        (gItem.item && String(si._id) === String(gItem.item._id || gItem.item)) ||
+        si.name.toLowerCase() === gItem.itemName.toLowerCase()
+      );
+
+      const price = isSell
+        ? (matchedStock?.sellPrice ?? gItem.price ?? 0)
+        : (matchedStock?.purchasePrice ?? gItem.price ?? 0);
+
+      const qty = Number(gItem.quantity) || 1;
+      const gst = 18;
+      const total = Math.round(qty * price * (1 + gst / 100) * 100) / 100;
+
+      return {
+        item: matchedStock?._id || gItem.item?._id || gItem.item || '',
+        itemName: matchedStock?.name || gItem.itemName,
+        unit: matchedStock?.unit || gItem.unit || 'piece',
+        quantity: qty,
+        price,
+        gst,
+        total,
+      };
+    });
+
+    setRows(appliedRows);
+    toast.success(`Loaded ${group.name} (${group.load}) components into voucher!`);
+  };
 
   const handleItemChange = (idx, itemId) => {
     const stockItem = stockItems.find((i) => i._id === itemId);
@@ -246,7 +283,25 @@ export default function VoucherForm({ type }) {
           <div className="card">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h3 className="font-semibold text-gray-700">Items</h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {!isExpense && loadGroups.length > 0 && (
+                  <select
+                    className="input text-xs py-1.5 px-2.5 font-bold text-orange-800 bg-orange-50 border-orange-300"
+                    onChange={(e) => {
+                      const g = loadGroups.find(lg => lg._id === e.target.value);
+                      if (g) applyLoadGroupToVoucher(g);
+                      e.target.value = '';
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>⚡ Fill from Load Group (e.g. 3 kW)...</option>
+                    {loadGroups.map(lg => (
+                      <option key={lg._id} value={lg._id}>
+                        {lg.load} — {lg.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 {!isExpense && (
                   <button
                     type="button"
